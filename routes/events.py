@@ -3,8 +3,8 @@ from typing import List
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select, Session
 
-from planner.database.connection import get_session
-from planner.models.events import Event, EventUpdate
+from database.connection import get_session
+from models.events import Event, EventUpdate
 
 event_router = APIRouter(
     tags=["Event"],

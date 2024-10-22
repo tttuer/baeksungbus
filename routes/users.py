@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 
-from planner.models.users import User, UserSingIn
+from models.users import User, UserSingIn
 
 users_router = APIRouter(
     tags=['User']

@@ -2,7 +2,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel, EmailStr
 
-from planner.models.events import Event
+from models.events import Event
 
 
 class User(BaseModel):
