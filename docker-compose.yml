@@ -1,12 +1,13 @@
-# docker-compose up -d
 version: '3'
 services:
   db:
     image: mysql:8
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: test_db
+      MYSQL_DATABASE: pyeongtaek
       MYSQL_USER: test_user
       MYSQL_PASSWORD: test_password
     ports:
       - "3306:3306"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
