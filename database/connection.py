@@ -1,15 +1,10 @@
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, create_engine
 
-database_file = 'planner.db'
-database_connection_string = 'sqlite:///' + database_file
-connect_args = {"check_same_thread": False}
-engine_url = create_engine(database_connection_string, echo=True, connect_args=connect_args)
-
-
-def conn():
-    SQLModel.metadata.create_all(engine_url)
-
+# MySQL 데이터베이스 설정
+database_connection_string = 'mysql+mysqlconnector://test_user:test_password@localhost:3306/pyeongtaek'
+engine_url = create_engine(database_connection_string, echo=True)
 
 def get_session():
+    # 세션을 여는 함수
     with Session(engine_url) as session:
         yield session
