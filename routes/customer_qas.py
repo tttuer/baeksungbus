@@ -114,7 +114,7 @@ async def delete_qa(id: int, password: str, session: Session = Depends(get_sessi
 
 
 @customer_qa_router.patch("/{id}")
-async def update_event(id: int, password: str, update_qa: CustomerQAUpdate, session: Session = Depends(get_session)) -> CustomerQA:
+async def update_qa(id: int, password: str, update_qa: CustomerQAUpdate, session: Session = Depends(get_session)) -> CustomerQA:
     qa = session.get(CustomerQA, id)
     if qa:
         if qa.password == password:
