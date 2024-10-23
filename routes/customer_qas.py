@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload, joinedload
 from sqlmodel import select, Session
 
 from database.connection import get_session
-from models.customer_qa import CustomerQA, CustomerQAShort, CustomerQAWithAnswer
+from models.customer_qa import CustomerQA, CustomerQAShort, CustomerQAWithAnswer, CustomerQAUpdate
 from models.events import Event, EventUpdate
 
 from fastapi import Query
@@ -19,7 +19,7 @@ customer_qa_router = APIRouter(
     tags=["Customer_qa"],
 )
 
-
+# qa의 전체 리스트 반환
 @customer_qa_router.get("/", response_model=List[CustomerQAShort])
 async def get_qas(
         page: int = Query(1, ge=1),  # 기본 페이지 번호는 1
@@ -56,10 +56,11 @@ async def get_qas(
     return qas_short
 
 
-@customer_qa_router.get("/{id}", response_model=CustomerQAWithAnswer, response_model_exclude={"password"})
+# qa 상세보기 클릭했을때 조회
+@customer_qa_router.get("/{id}", response_model=CustomerQAWithAnswer, response_model_exclude={"password", "answers.customer_qa_id"})
 async def get_qa(id: int, password: str, session: Session = Depends(get_session)) -> CustomerQAWithAnswer:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
-    statement = select(CustomerQA).options(joinedload(CustomerQA.answers)).where(CustomerQA.id == id)
+    statement = select(CustomerQA).options(selectinload(CustomerQA.answers)).where(CustomerQA.id == id)
     qa = session.exec(statement).first()
 
     if not qa:
@@ -73,11 +74,10 @@ async def get_qa(id: int, password: str, session: Session = Depends(get_session)
             detail="Password is not correct",
         )
 
-    print(f'qa.answers: {qa.answers}')
-
     return qa
 
 
+# qa 생성
 @customer_qa_router.post("/", response_model=CustomerQA)
 async def create_customer_qa(new_qa: CustomerQA, session=Depends(get_session)) -> CustomerQA:
     raise_exception(new_qa.writer, "Writer cannot be blank")
@@ -92,44 +92,48 @@ async def create_customer_qa(new_qa: CustomerQA, session=Depends(get_session)) -
 
     return new_qa
 
-
+# qa 삭제
 @customer_qa_router.delete("/{id}")
-async def delete_event(id: int, session: Session = Depends(get_session)) -> dict:
-    event = session.get(Event, id)
+async def delete_qa(id: int, password: str, session: Session = Depends(get_session)) -> dict:
+    event = session.get(CustomerQA, id)
     if event:
-        session.delete(event)
-        session.commit()
-        return {
-            'message': 'Event deleted',
-        }
+        if password == event.password:
+            session.delete(event)
+            session.commit()
+            return {
+                'message': 'Customer QA deleted',
+            }
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is incorrect",
+        )
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail="Event not found",
+        detail="Customer QA not found",
     )
 
 
-@customer_qa_router.delete("/")
-async def delete_all_events() -> dict:
-    return {
-        'message': 'All event deleted',
-    }
+@customer_qa_router.patch("/{id}")
+async def update_event(id: int, password: str, update_qa: CustomerQAUpdate, session: Session = Depends(get_session)) -> CustomerQA:
+    qa = session.get(CustomerQA, id)
+    if qa:
+        if qa.password == password:
+            event_data = update_qa.model_dump(exclude_unset=True)
+            for key, value in event_data.items():
+                setattr(qa, key, value)
+            session.add(qa)
+            session.commit()
+            session.refresh(qa)
 
+            return qa
 
-@customer_qa_router.put("/{id}")
-async def update_event(id: int, update_event: EventUpdate, session: Session = Depends(get_session)) -> Event:
-    event = session.get(Event, id)
-    if event:
-        event_data = update_event.model_dump(exclude_unset=True)
-        for key, value in event_data.items():
-            setattr(event, key, value)
-        session.add(event)
-        session.commit()
-        session.refresh(event)
-
-        return event
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password incorrect",
+        )
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail="Event not found",
+        detail="Customer QA not found",
     )
 
 def raise_exception(empty_val, message: str):

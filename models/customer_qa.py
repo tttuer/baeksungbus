@@ -22,7 +22,7 @@ class CustomerQA(CustomerQABase, table=True):
     id: int = Field(primary_key=True, default=None)
 
     # Answer와의 1:N 관계 설정
-    answers: List[Answer] = Relationship(back_populates="customer_qa")
+    answers: List[Answer] = Relationship(back_populates="customer_qa", cascade_delete=True)
 
     class Config:
         json_schema_extra = {
@@ -62,3 +62,10 @@ class CustomerQAPublic(CustomerQABase):
 
 class CustomerQAWithAnswer(CustomerQAPublic):
     answers: list[Answer] = []
+
+class CustomerQAUpdate(SQLModel):
+    writer: Optional[str] = None
+    email: Optional[EmailStr] = None
+    title: Optional[str] = None
+    content: Optional[str] = None
+    attachment: Optional[bytes] = None

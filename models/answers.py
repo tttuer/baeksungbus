@@ -8,7 +8,7 @@ from sqlmodel import SQLModel, Field, JSON, Column, Relationship
 
 class AnswerBase(SQLModel):
     content: str
-    customer_qa_id: int = Field(default=None, foreign_key="customer_qa.id")
+    customer_qa_id: int = Field(default=None, foreign_key="customer_qa.id", ondelete='CASCADE')
 
 
 class Answer(AnswerBase, table=True):
