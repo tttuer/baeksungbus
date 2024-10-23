@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select, Session
 
 from database.connection import get_session
+from models import Answer
 from models.customer_qa import CustomerQA, CustomerQAShort
 from models.events import Event, EventUpdate
 
@@ -13,12 +14,12 @@ from fastapi import Query
 from datetime import datetime
 import pytz
 
-customer_qa_router = APIRouter(
-    tags=["Customer_qa"],
+answer_router = APIRouter(
+    tags=["Answer"],
 )
 
 
-@customer_qa_router.get("/", response_model=List[CustomerQAShort])
+@answer_router.get("/", response_model=List[CustomerQAShort])
 async def get_qas(
         page: int = Query(1, ge=1),  # 기본 페이지 번호는 1
         page_size: int = Query(20, ge=1, le=100),  # 페이지 크기는 1~100 사이, 기본 20
@@ -54,7 +55,7 @@ async def get_qas(
     return qas_short
 
 
-@customer_qa_router.get("/{id}", response_model=CustomerQA, response_model_exclude={"password"})
+@answer_router.get("/{id}", response_model=CustomerQA, response_model_exclude={"password"})
 async def get_qa(id: int, password: str, session: Session = Depends(get_session)) -> CustomerQA:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
     qa = (session.exec(select(CustomerQA).where(CustomerQA.id == id)
@@ -75,22 +76,25 @@ async def get_qa(id: int, password: str, session: Session = Depends(get_session)
     return qa
 
 
-@customer_qa_router.post("/", response_model=CustomerQA)
-async def create_customer_qa(new_qa: CustomerQA, session=Depends(get_session)) -> CustomerQA:
-    raise_exception(new_qa.writer, "Writer cannot be blank")
-    raise_exception(new_qa.password, "Password cannot be blank")
-    raise_exception(new_qa.title, "Title cannot be blank")
+@answer_router.post("/", response_model=Answer)
+async def create_answer(new_answer: Answer, qa_id: int, session=Depends(get_session)) -> Answer:
+    raise_exception(new_answer.content, "Content cannot be blank")
+    raise_exception(qa_id, 'qa_id cannot be null')
 
-    new_qa.c_date = get_kr_date()
+    qa_statement = select(CustomerQA).where(CustomerQA.id == qa_id)
+    qa = session.exec(qa_statement).first()
+    new_answer.customer_qa = qa
 
-    session.add(new_qa)
+    new_answer.customer_qa_id = qa_id
+
+    session.add(new_answer)
     session.commit()
-    session.refresh(new_qa)
+    session.refresh(new_answer)
 
-    return new_qa
+    return new_answer
 
 
-@customer_qa_router.delete("/{id}")
+@answer_router.delete("/{id}")
 async def delete_event(id: int, session: Session = Depends(get_session)) -> dict:
     event = session.get(Event, id)
     if event:
@@ -105,14 +109,14 @@ async def delete_event(id: int, session: Session = Depends(get_session)) -> dict
     )
 
 
-@customer_qa_router.delete("/")
+@answer_router.delete("/")
 async def delete_all_events() -> dict:
     return {
         'message': 'All event deleted',
     }
 
 
-@customer_qa_router.put("/{id}")
+@answer_router.put("/{id}")
 async def update_event(id: int, update_event: EventUpdate, session: Session = Depends(get_session)) -> Event:
     event = session.get(Event, id)
     if event:
@@ -129,8 +133,8 @@ async def update_event(id: int, update_event: EventUpdate, session: Session = De
         detail="Event not found",
     )
 
-def raise_exception(empty_val, message: str):
-    if empty_val == '':
+def raise_exception(val, message: str):
+    if val == '' or not val:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,

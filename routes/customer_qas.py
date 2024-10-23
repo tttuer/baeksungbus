@@ -1,17 +1,19 @@
 from typing import List
 
 from fastapi import APIRouter, HTTPException, status, Depends
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from sqlmodel import select, Session
 
 from database.connection import get_session
-from models.customer_qa import CustomerQA, CustomerQAShort
+from models.customer_qa import CustomerQA, CustomerQAShort, CustomerQAWithAnswer
 from models.events import Event, EventUpdate
 
 from fastapi import Query
 
 from datetime import datetime
 import pytz
+
+from models.answers import Answer
 
 customer_qa_router = APIRouter(
     tags=["Customer_qa"],
@@ -54,12 +56,11 @@ async def get_qas(
     return qas_short
 
 
-@customer_qa_router.get("/{id}", response_model=CustomerQA, response_model_exclude={"password"})
-async def get_qa(id: int, password: str, session: Session = Depends(get_session)) -> CustomerQA:
+@customer_qa_router.get("/{id}", response_model=CustomerQAWithAnswer, response_model_exclude={"password"})
+async def get_qa(id: int, password: str, session: Session = Depends(get_session)) -> CustomerQAWithAnswer:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
-    qa = (session.exec(select(CustomerQA).where(CustomerQA.id == id)
-                       .options(selectinload(CustomerQA.answers)))
-          .first())
+    statement = select(CustomerQA).options(joinedload(CustomerQA.answers)).where(CustomerQA.id == id)
+    qa = session.exec(statement).first()
 
     if not qa:
         raise HTTPException(
@@ -71,6 +72,8 @@ async def get_qa(id: int, password: str, session: Session = Depends(get_session)
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password is not correct",
         )
+
+    print(f'qa.answers: {qa.answers}')
 
     return qa
 
