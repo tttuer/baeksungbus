@@ -2,11 +2,17 @@ from datetime import datetime
 from typing import Optional, List
 
 from pydantic import BaseModel, EmailStr
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, Enum
+from enum import Enum as PyEnum
 
 from models.answers import Answer
 
-class CustomerQABase(SQLModel):
+# 1. ENUM 정의
+class QAType(PyEnum):
+    CUSTOMER = "CUSTOMER"
+    LOST = "LOST"
+
+class QABase(SQLModel):
     writer: str
     email: Optional[EmailStr] = None
     password: str
@@ -16,13 +22,14 @@ class CustomerQABase(SQLModel):
     c_date: Optional[datetime] = None
     done: bool = False
     read_cnt: int = 0
+    qa_type: QAType = Field(sa_column=Enum(QAType), default=QAType.CUSTOMER)  # qa_type 필드 추가
 
-class CustomerQA(CustomerQABase, table=True):
-    __tablename__ = 'customer_qa'
+class QA(QABase, table=True):
+    __tablename__ = 'qa'
     id: int = Field(primary_key=True, default=None)
 
     # Answer와의 1:N 관계 설정
-    answers: List[Answer] = Relationship(back_populates="customer_qa", cascade_delete=True)
+    answers: List[Answer] = Relationship(back_populates="qa", cascade_delete=True)
 
     class Config:
         json_schema_extra = {
@@ -32,7 +39,7 @@ class CustomerQA(CustomerQABase, table=True):
             }
         }
 
-class CustomerQAShort(SQLModel):
+class QAShort(SQLModel):
     id: int
     title: str
     writer: str
@@ -40,6 +47,7 @@ class CustomerQAShort(SQLModel):
     done: bool
     read_cnt: int
     attachment: Optional[bytes] = None
+    qa_type: QAType = Field(sa_column=Enum(QAType), default=QAType.CUSTOMER)  # qa_type 필드 추가
 
     @property
     def c_date_formatted(self) -> str:
@@ -57,13 +65,13 @@ class CustomerQAShort(SQLModel):
             }
         }
 
-class CustomerQAPublic(CustomerQABase):
+class QAPublic(QABase):
     id: int
 
-class CustomerQAWithAnswer(CustomerQAPublic):
+class QAWithAnswer(QAPublic):
     answers: list[Answer] = []
 
-class CustomerQAUpdate(SQLModel):
+class QAUpdate(SQLModel):
     writer: Optional[str] = None
     email: Optional[EmailStr] = None
     title: Optional[str] = None

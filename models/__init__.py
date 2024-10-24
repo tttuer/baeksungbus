@@ -1,2 +1,2 @@
-from .customer_qa import CustomerQA
+from .qa import QA
 from .answers import Answer
