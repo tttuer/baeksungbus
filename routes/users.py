@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import selectinload
 from sqlmodel import select, Session
@@ -28,8 +28,8 @@ hash_password = HashPassword()
 
 
 @users_router.post('/signup')
-async def signup(user: User):
-    user_exist = await User.find_one(User.id == user.id)
+async def signup(user: User, session=Depends(get_session)):
+    user_exist = session.get(User, user.id)
     if user_exist:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -38,20 +38,24 @@ async def signup(user: User):
 
     hashed_password = hash_password.create_hash(user.password)
     user.password = hashed_password
-    await user_database.save(user)
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
     return {
         'message': 'User registered',
     }
 
 
-@users_router.post('/signin', response_model=TokenResponse)
-async def signin(user: OAuth2PasswordRequestForm = Depends()):
+@users_router.post('/login', response_model=TokenResponse)
+async def login(response: Response, user: OAuth2PasswordRequestForm = Depends(), session=Depends(get_session)):
     if user.username != 'bsbus':
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='User is unauthorized user'
         )
-    user_exist = await User.find_one(User.id == user.username)
+    user_exist = session.get(User, user.username)
     if not user_exist:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -63,7 +67,12 @@ async def signin(user: OAuth2PasswordRequestForm = Depends()):
             detail='Password mismatch'
         )
 
-    access_token = create_access_token(user_exist.email)
+    access_token = create_access_token(user_exist.id)
+
+    # Authorization 헤더에 Bearer 토큰을 추가
+    response.headers["Authorization"] = f"Bearer {access_token}"
+
+    # 여전히 JSON 응답으로 토큰도 반환
     return {
         'access_token': access_token,
         'token_type': 'Bearer'
