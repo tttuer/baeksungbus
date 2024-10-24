@@ -1,11 +1,12 @@
 from datetime import datetime
+from enum import Enum as PyEnum
 from typing import Optional, List
 
-from pydantic import BaseModel, EmailStr
+from pydantic import EmailStr
 from sqlmodel import SQLModel, Field, Relationship, Enum
-from enum import Enum as PyEnum
 
 from models.answers import Answer
+
 
 # 1. ENUM 정의
 class QAType(PyEnum):

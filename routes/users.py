@@ -1,21 +1,9 @@
-from typing import List
-
 from fastapi import APIRouter, HTTPException, status, Depends, Response
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import selectinload
-from sqlmodel import select, Session
 
 from auth.hash_password import HashPassword
 from auth.jwt_handler import create_access_token
 from database.connection import get_session
-from models import Answer
-from models.qa import QA, QAShort
-
-from fastapi import Query
-
-from datetime import datetime
-import pytz
-
 from models.users import User, TokenResponse
 
 users_router = APIRouter(

@@ -1,19 +1,14 @@
-from typing import List
+from datetime import datetime
 
+import pytz
 from fastapi import APIRouter, HTTPException, status, Depends
-from sqlalchemy.orm import selectinload
 from sqlmodel import select, Session
 
 from auth.authenticate import authenticate
 from database.connection import get_session
 from models import Answer
 from models.answers import AnswerUpdate
-from models.qa import QA, QAShort
-
-from fastapi import Query
-
-from datetime import datetime
-import pytz
+from models.qa import QA
 
 answer_router = APIRouter(
     tags=["Answer"],

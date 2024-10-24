@@ -1,6 +1,7 @@
 from typing import Optional
 
-from sqlmodel import SQLModel, Field, JSON, Column, Relationship
+from sqlmodel import SQLModel, Field, Relationship
+
 
 class AnswerBase(SQLModel):
     content: str
