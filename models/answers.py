@@ -1,11 +1,8 @@
-from typing import Optional
-
 from sqlmodel import SQLModel, Field, JSON, Column, Relationship
 
 class AnswerBase(SQLModel):
     content: str
     qa_id: int = Field(default=None, foreign_key="qa.id", ondelete='CASCADE')
-    creator: Optional[str]
 
 
 class Answer(AnswerBase, table=True):
@@ -21,8 +18,6 @@ class Answer(AnswerBase, table=True):
             }
         }
 
-class AnswerUpdate(SQLModel):
-    content: str
 
 # class UserSingIn(BaseModel):
 #     email: EmailStr

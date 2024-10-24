@@ -80,7 +80,7 @@ async def get_qa(id: int, password: str, qa_type: QAType, session: Session = Dep
 
 # qa 생성
 @qa_router.post("/", response_model=QA)
-async def create_qa(new_qa: QA, session=Depends(get_session)) -> QA:
+async def create_customer_qa(new_qa: QA, session=Depends(get_session)) -> QA:
     raise_exception(new_qa.writer, "Writer cannot be blank")
     raise_exception(new_qa.password, "Password cannot be blank")
     raise_exception(new_qa.title, "Title cannot be blank")
