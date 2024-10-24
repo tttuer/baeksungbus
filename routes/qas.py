@@ -12,8 +12,6 @@ from fastapi import Query
 from datetime import datetime
 import pytz
 
-from models.answers import Answer
-
 qa_router = APIRouter(
     tags=["Qa"],
 )

@@ -1,9 +1,11 @@
 from pydantic import BaseModel
-from sqlmodel import SQLModel
+from sqlalchemy import table
+from sqlmodel import SQLModel, Field
 
 
-class User(SQLModel):
-    id: str
+class User(SQLModel, table=True):
+    __tablename__ = 'user'
+    id: str = Field(primary_key=True, default=None)
     password: str
 
     class Config:
@@ -13,9 +15,6 @@ class User(SQLModel):
                 'password': 'password',
             }
         }
-
-    class Settings:
-        name = 'users'
 
 
 class TokenResponse(BaseModel):
