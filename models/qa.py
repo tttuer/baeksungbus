@@ -20,10 +20,14 @@ class QABase(SQLModel):
     title: str
     content: Optional[str] = None
     attachment: Optional[bytes] = None
-    c_date: Optional[datetime] = None
+    c_date: Optional[str] = None
     done: bool = False
     read_cnt: int = 0
     qa_type: QAType = Field(sa_column=Enum(QAType), default=QAType.CUSTOMER)  # qa_type 필드 추가
+
+    @property
+    def c_date_formatted(self) -> str:
+        return self.c_date.strftime('%Y-%m-%d')
 
 class QA(QABase, table=True):
     __tablename__ = 'qa'
@@ -35,8 +39,12 @@ class QA(QABase, table=True):
     class Config:
         json_schema_extra = {
             'example': {
-                'email': 'ex.example.com',
-                'answers': [],
+                'id': 1,
+                'title': 'title',
+                'writer': 'writer',
+                'c_date': '2024-10-23',
+                'done': True,
+                'read_cnt': 1,
             }
         }
 

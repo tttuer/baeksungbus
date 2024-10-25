@@ -47,7 +47,7 @@ async def get_notices(
             id=row.id,
             title=row.title,
             writer=row.writer,
-            c_date=row.c_date.strftime('%Y-%m-%d'),
+            c_date=row.c_date,
             done=row.done,
             read_cnt=row.read_cnt
         ) for row in result
@@ -58,9 +58,9 @@ async def get_notices(
 
 # qa 상세보기 클릭했을때 조회
 @notice_router.get("/{id}", response_model=NoticeWithAnswer, response_model_exclude={"password"})
-async def get_notice(id: int, password: str, session: Session = Depends(get_session)) -> NoticeWithAnswer:
+async def get_notice(id: int, session: Session = Depends(get_session)) -> NoticeWithAnswer:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
-    statement = select(Notice).options(selectinload(Notice.answers)).where(Notice.id == id)
+    statement = select(Notice).where(Notice.id == id)
     notice = session.exec(statement).first()
 
     if not notice:
@@ -68,12 +68,6 @@ async def get_notice(id: int, password: str, session: Session = Depends(get_sess
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Notice not found",
         )
-    if notice.password != password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password is not correct",
-        )
-
     return notice
 
 
@@ -85,7 +79,7 @@ async def create_notice(new_notice: Notice, user: str = Depends(authenticate), s
     raise_exception(new_notice.writer, "Writer cannot be blank")
     raise_exception(new_notice.title, "Title cannot be blank")
 
-    new_notice.c_date = get_kr_date()
+    new_notice.c_date = get_kr_date().format('%Y-%m-%d')
     new_notice.creator = user
 
     session.add(new_notice)
@@ -130,7 +124,7 @@ async def update_notice(id: int, update_notice: NoticeUpdate, user: str = Depend
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail="Customer QA not found",
+        detail="Notice not found",
     )
 
 def raise_exception(empty_val, message: str):

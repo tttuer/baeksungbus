@@ -15,7 +15,7 @@ class NoticeType(PyEnum):
     NOTICE = "NOTICE"
 
 class NoticeBase(SQLModel):
-    writer: str
+    writer: str = '평택여객(주)'
     email: Optional[EmailStr] = None
     title: str
     content: Optional[str] = None
@@ -23,21 +23,18 @@ class NoticeBase(SQLModel):
     c_date: Optional[datetime] = None
     done: bool = False
     read_cnt: int = 0
-    qa_type: NoticeType = Field(sa_column=Enum(NoticeType), default=NoticeType.CUSTOMER)  # qa_type 필드 추가
+    notice_type: NoticeType = Field(sa_column=Enum(NoticeType), default=NoticeType.NOTICE)  # qa_type 필드 추가
     creator: Optional[str]
 
 class Notice(NoticeBase, table=True):
     __tablename__ = 'notice'
     id: int = Field(primary_key=True, default=None)
 
-    # Answer와의 1:N 관계 설정
-    answers: List[Answer] = Relationship(back_populates="qa", cascade_delete=True)
-
     class Config:
         json_schema_extra = {
             'example': {
-                'email': 'ex.example.com',
-                'answers': [],
+                'title': 'title',
+                'notice_type': 'NOTICE',
             }
         }
 
@@ -48,8 +45,8 @@ class NoticeShort(SQLModel):
     c_date: str
     done: bool
     read_cnt: int
-    attachment: Optional[bytes] = None
-    qa_type: NoticeType = Field(sa_column=Enum(NoticeType), default=NoticeType.CUSTOMER)  # qa_type 필드 추가
+    attachment: Optional[bytes]
+    notice_type: NoticeType
 
     @property
     def c_date_formatted(self) -> str:
@@ -74,8 +71,6 @@ class NoticeWithAnswer(NoticePublic):
     answers: list[Answer] = []
 
 class NoticeUpdate(SQLModel):
-    writer: Optional[str] = None
-    email: Optional[EmailStr] = None
     title: Optional[str] = None
     content: Optional[str] = None
     attachment: Optional[bytes] = None

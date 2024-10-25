@@ -47,7 +47,7 @@ async def get_qas(
             id=row.id,
             title=row.title,
             writer=row.writer,
-            c_date=row.c_date.strftime('%Y-%m-%d'),
+            c_date=row.c_date,
             done=row.done,
             read_cnt=row.read_cnt
         ) for row in result
@@ -58,7 +58,7 @@ async def get_qas(
 
 # qa 상세보기 클릭했을때 조회
 @qa_router.get("/{id}", response_model=QAWithAnswer, response_model_exclude={"password", "answers.customer_qa_id"})
-async def get_qa(id: int, password: str, session: Session = Depends(get_session)) -> QAWithAnswer:
+async def get_qa(id: int, session: Session = Depends(get_session)) -> QAWithAnswer:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
     statement = select(QA).options(selectinload(QA.answers)).where(QA.id == id)
     qa = session.exec(statement).first()
@@ -68,14 +68,7 @@ async def get_qa(id: int, password: str, session: Session = Depends(get_session)
             status_code=status.HTTP_404_NOT_FOUND,
             detail="CustomerQA not found",
         )
-    if qa.password != password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password is not correct",
-        )
-
     return qa
-
 
 # qa 생성
 @qa_router.post("/", response_model=QA)
@@ -84,7 +77,7 @@ async def create_qa(new_qa: QA, session=Depends(get_session)) -> QA:
     raise_exception(new_qa.password, "Password cannot be blank")
     raise_exception(new_qa.title, "Title cannot be blank")
 
-    new_qa.c_date = get_kr_date()
+    new_qa.c_date = get_kr_date().format('%Y-%m-%d')
 
     session.add(new_qa)
     session.commit()
