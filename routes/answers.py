@@ -16,16 +16,23 @@ answer_router = APIRouter(
 
 @answer_router.post("/", response_model=Answer)
 async def create_answer(new_answer: Answer, qa_id: int, user: str = Depends(authenticate), session=Depends(get_session)) -> Answer:
+    if user != 'bsbus':
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
     raise_exception(new_answer.content, "Content cannot be blank")
     raise_exception(qa_id, 'qa_id cannot be null')
 
     qa_statement = select(QA).where(QA.id == qa_id)
     qa = session.exec(qa_statement).first()
-    new_answer.qa = qa
+    qa.done = True
 
+    new_answer.qa = qa
     new_answer.creator = user
     new_answer.qa_id = qa_id
 
+    session.add(qa)
     session.add(new_answer)
     session.commit()
     session.refresh(new_answer)
@@ -42,6 +49,10 @@ async def delete_answer(id: int, user: str = Depends(authenticate), session: Ses
             detail="You do not have permission to perform this action",
         )
     if answer_exist:
+        qa = session.get(QA, answer_exist.qa_id)
+        qa.done = False
+
+        session.add(qa)
         session.delete(answer_exist)
         session.commit()
         return {

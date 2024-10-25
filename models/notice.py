@@ -9,25 +9,25 @@ from models.answers import Answer
 
 
 # 1. ENUM 정의
-class QAType(PyEnum):
+class NoticeType(PyEnum):
     TIME = "TIME"
-    TTOCK = "LOST"
+    TTOCK = "TTOCK"
     NOTICE = "NOTICE"
 
-class QABase(SQLModel):
+class NoticeBase(SQLModel):
     writer: str
     email: Optional[EmailStr] = None
-    password: str
     title: str
     content: Optional[str] = None
     attachment: Optional[bytes] = None
     c_date: Optional[datetime] = None
     done: bool = False
     read_cnt: int = 0
-    qa_type: QAType = Field(sa_column=Enum(QAType), default=QAType.CUSTOMER)  # qa_type 필드 추가
+    qa_type: NoticeType = Field(sa_column=Enum(NoticeType), default=NoticeType.CUSTOMER)  # qa_type 필드 추가
+    creator: Optional[str]
 
-class QA(QABase, table=True):
-    __tablename__ = 'qa'
+class Notice(NoticeBase, table=True):
+    __tablename__ = 'notice'
     id: int = Field(primary_key=True, default=None)
 
     # Answer와의 1:N 관계 설정
@@ -41,7 +41,7 @@ class QA(QABase, table=True):
             }
         }
 
-class QAShort(SQLModel):
+class NoticeShort(SQLModel):
     id: int
     title: str
     writer: str
@@ -49,7 +49,7 @@ class QAShort(SQLModel):
     done: bool
     read_cnt: int
     attachment: Optional[bytes] = None
-    qa_type: QAType = Field(sa_column=Enum(QAType), default=QAType.CUSTOMER)  # qa_type 필드 추가
+    qa_type: NoticeType = Field(sa_column=Enum(NoticeType), default=NoticeType.CUSTOMER)  # qa_type 필드 추가
 
     @property
     def c_date_formatted(self) -> str:
@@ -67,13 +67,13 @@ class QAShort(SQLModel):
             }
         }
 
-class QAPublic(QABase):
+class NoticePublic(NoticeBase):
     id: int
 
-class QAWithAnswer(QAPublic):
+class NoticeWithAnswer(NoticePublic):
     answers: list[Answer] = []
 
-class QAUpdate(SQLModel):
+class NoticeUpdate(SQLModel):
     writer: Optional[str] = None
     email: Optional[EmailStr] = None
     title: Optional[str] = None

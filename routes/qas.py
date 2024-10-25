@@ -7,7 +7,6 @@ from fastapi import Query
 from sqlalchemy.orm import selectinload
 from sqlmodel import select, Session
 
-from auth.authenticate import authenticate
 from database.connection import get_session
 from models.qa import QA, QAShort, QAWithAnswer, QAUpdate, QAType
 
@@ -59,7 +58,7 @@ async def get_qas(
 
 # qa 상세보기 클릭했을때 조회
 @qa_router.get("/{id}", response_model=QAWithAnswer, response_model_exclude={"password", "answers.customer_qa_id"})
-async def get_qa(id: int, password: str, qa_type: QAType, session: Session = Depends(get_session)) -> QAWithAnswer:
+async def get_qa(id: int, password: str, session: Session = Depends(get_session)) -> QAWithAnswer:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
     statement = select(QA).options(selectinload(QA.answers)).where(QA.id == id)
     qa = session.exec(statement).first()
@@ -80,7 +79,7 @@ async def get_qa(id: int, password: str, qa_type: QAType, session: Session = Dep
 
 # qa 생성
 @qa_router.post("/", response_model=QA)
-async def create_qa(new_qa: QA, user: str = Depends(authenticate), session=Depends(get_session)) -> QA:
+async def create_qa(new_qa: QA, session=Depends(get_session)) -> QA:
     raise_exception(new_qa.writer, "Writer cannot be blank")
     raise_exception(new_qa.password, "Password cannot be blank")
     raise_exception(new_qa.title, "Title cannot be blank")
@@ -96,10 +95,10 @@ async def create_qa(new_qa: QA, user: str = Depends(authenticate), session=Depen
 # qa 삭제
 @qa_router.delete("/{id}")
 async def delete_qa(id: int, password: str, session: Session = Depends(get_session)) -> dict:
-    event = session.get(QA, id)
-    if event:
-        if password == event.password:
-            session.delete(event)
+    qa = session.get(QA, id)
+    if qa:
+        if password == qa.password:
+            session.delete(qa)
             session.commit()
             return {
                 'message': 'Customer QA deleted',

@@ -7,33 +7,34 @@ from fastapi import Query
 from sqlalchemy.orm import selectinload
 from sqlmodel import select, Session
 
+from auth.authenticate import authenticate
 from database.connection import get_session
-from models.qa import QA, QAShort, QAWithAnswer, QAUpdate, QAType
+from models.notice import Notice, NoticeShort, NoticeType, NoticeWithAnswer, NoticeUpdate
 
-qa_router = APIRouter(
-    tags=["Qa"],
+notice_router = APIRouter(
+    tags=["Notice"],
 )
 
 # qa의 전체 리스트 반환
-@qa_router.get("/", response_model=List[QAShort])
-async def get_qas(
-        qa_type: QAType,
+@notice_router.get("/", response_model=List[NoticeShort])
+async def get_notices(
+        notice_type: NoticeType,
         page: int = Query(1, ge=1),  # 기본 페이지 번호는 1
         page_size: int = Query(20, ge=1, le=100),  # 페이지 크기는 1~100 사이, 기본 20
         session: Session = Depends(get_session)
-) -> List[QAShort]:
+) -> List[NoticeShort]:
     offset = (page - 1) * page_size  # 페이지 번호에 따른 오프셋 계산
 
     # 필요한 필드만 선택해서 가져오는 쿼리 작성
     statement = (
         select(
-            QA.id,
-            QA.title,
-            QA.writer,
-            QA.c_date,
-            QA.done,
-            QA.read_cnt)
-                 .where(QA.qa_type == qa_type)
+            Notice.id,
+            Notice.title,
+            Notice.writer,
+            Notice.c_date,
+            Notice.done,
+            Notice.read_cnt)
+                 .where(Notice.notice_type == notice_type)
                  .offset(offset)
                  .limit(page_size))
 
@@ -41,8 +42,8 @@ async def get_qas(
     result = session.exec(statement).all()
 
     # 필요한 필드를 CustomerQAShort로 변환
-    qas_short = [
-        QAShort(
+    notices_short = [
+        NoticeShort(
             id=row.id,
             title=row.title,
             writer=row.writer,
@@ -52,84 +53,81 @@ async def get_qas(
         ) for row in result
     ]
 
-    return qas_short
+    return notices_short
 
 
 # qa 상세보기 클릭했을때 조회
-@qa_router.get("/{id}", response_model=QAWithAnswer, response_model_exclude={"password", "answers.customer_qa_id"})
-async def get_qa(id: int, password: str, qa_type: QAType, session: Session = Depends(get_session)) -> QAWithAnswer:
+@notice_router.get("/{id}", response_model=NoticeWithAnswer, response_model_exclude={"password"})
+async def get_notice(id: int, password: str, session: Session = Depends(get_session)) -> NoticeWithAnswer:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
-    statement = select(QA).options(selectinload(QA.answers)).where(QA.id == id)
-    qa = session.exec(statement).first()
+    statement = select(Notice).options(selectinload(Notice.answers)).where(Notice.id == id)
+    notice = session.exec(statement).first()
 
-    if not qa:
+    if not notice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="CustomerQA not found",
+            detail="Notice not found",
         )
-    if qa.password != password:
+    if notice.password != password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password is not correct",
         )
 
-    return qa
+    return notice
 
 
 # qa 생성
-@qa_router.post("/", response_model=QA)
-async def create_qa(new_qa: QA, session=Depends(get_session)) -> QA:
-    raise_exception(new_qa.writer, "Writer cannot be blank")
-    raise_exception(new_qa.password, "Password cannot be blank")
-    raise_exception(new_qa.title, "Title cannot be blank")
+@notice_router.post("/", response_model=Notice)
+async def create_notice(new_notice: Notice, user: str = Depends(authenticate), session=Depends(get_session)) -> Notice:
+    check_admin(user)
 
-    new_qa.c_date = get_kr_date()
+    raise_exception(new_notice.writer, "Writer cannot be blank")
+    raise_exception(new_notice.title, "Title cannot be blank")
 
-    session.add(new_qa)
+    new_notice.c_date = get_kr_date()
+    new_notice.creator = user
+
+    session.add(new_notice)
     session.commit()
-    session.refresh(new_qa)
+    session.refresh(new_notice)
 
-    return new_qa
+    return new_notice
 
 # qa 삭제
-@qa_router.delete("/{id}")
-async def delete_qa(id: int, password: str, session: Session = Depends(get_session)) -> dict:
-    event = session.get(QA, id)
-    if event:
-        if password == event.password:
-            session.delete(event)
-            session.commit()
-            return {
-                'message': 'Customer QA deleted',
-            }
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password is incorrect",
-        )
+@notice_router.delete("/{id}")
+async def delete_notice(id: int, user: str = Depends(authenticate), session: Session = Depends(get_session)) -> dict:
+    check_admin(user)
+
+    notice = session.get(Notice, id)
+
+    if notice:
+        session.delete(notice)
+        session.commit()
+        return {
+            'message': 'Notice deleted',
+        }
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Customer QA not found",
     )
 
 
-@qa_router.patch("/{id}")
-async def update_qa(id: int, password: str, update_qa: QAUpdate, session: Session = Depends(get_session)) -> QA:
-    qa = session.get(QA, id)
-    if qa:
-        if qa.password == password:
-            event_data = update_qa.model_dump(exclude_unset=True)
-            for key, value in event_data.items():
-                setattr(qa, key, value)
-            session.add(qa)
-            session.commit()
-            session.refresh(qa)
+@notice_router.patch("/{id}")
+async def update_notice(id: int, update_notice: NoticeUpdate, user: str = Depends(authenticate), session: Session = Depends(get_session)) -> Notice:
+    check_admin(user)
 
-            return qa
+    notice = session.get(Notice, id)
+    if notice:
+        notice_data = update_notice.model_dump(exclude_unset=True)
+        for key, value in notice_data.items():
+            setattr(notice, key, value)
+        session.add(notice)
+        session.commit()
+        session.refresh(notice)
 
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password incorrect",
-        )
+        return notice
+
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Customer QA not found",
@@ -140,6 +138,13 @@ def raise_exception(empty_val, message: str):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,
+        )
+
+def check_admin(user: str):
+    if user != 'bsbus':
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
         )
 
 def get_kr_date():
