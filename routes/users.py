@@ -15,6 +15,7 @@ users = {}
 hash_password = HashPassword()
 
 
+# 처음 bsbus 만들고 쓰이지 않음
 @users_router.post('/signup')
 async def signup(user: User, session=Depends(get_session)):
     user_exist = session.get(User, user.id)

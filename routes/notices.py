@@ -7,7 +7,6 @@ from fastapi import Query
 from sqlalchemy.orm import selectinload
 from sqlmodel import select, Session
 
-from auth.authenticate import authenticate
 from database.connection import get_session
 from models.qa import QA, QAShort, QAWithAnswer, QAUpdate, QAType
 
@@ -21,7 +20,6 @@ async def get_qas(
         qa_type: QAType,
         page: int = Query(1, ge=1),  # 기본 페이지 번호는 1
         page_size: int = Query(20, ge=1, le=100),  # 페이지 크기는 1~100 사이, 기본 20
-
         session: Session = Depends(get_session)
 ) -> List[QAShort]:
     offset = (page - 1) * page_size  # 페이지 번호에 따른 오프셋 계산
@@ -80,7 +78,7 @@ async def get_qa(id: int, password: str, qa_type: QAType, session: Session = Dep
 
 # qa 생성
 @qa_router.post("/", response_model=QA)
-async def create_qa(new_qa: QA, user: str = Depends(authenticate), session=Depends(get_session)) -> QA:
+async def create_qa(new_qa: QA, session=Depends(get_session)) -> QA:
     raise_exception(new_qa.writer, "Writer cannot be blank")
     raise_exception(new_qa.password, "Password cannot be blank")
     raise_exception(new_qa.title, "Title cannot be blank")
