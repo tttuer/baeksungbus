@@ -2,8 +2,9 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Optional, List
 
-from pydantic import EmailStr
+from pydantic import EmailStr, BaseModel
 from sqlmodel import SQLModel, Field, Relationship, Enum
+from starlette.datastructures import UploadFile
 
 from models.answers import Answer
 
@@ -20,9 +21,11 @@ class QABase(SQLModel):
     title: str
     content: Optional[str] = None
     attachment: Optional[bytes] = None
+    attachment_filename: Optional[str] = None
     c_date: Optional[str] = None
     done: bool = False
     read_cnt: int = 0
+    hidden: bool = False
     qa_type: QAType = Field(sa_column=Enum(QAType), default=QAType.CUSTOMER)  # qa_type 필드 추가
 
     @property
@@ -56,6 +59,7 @@ class QAShort(SQLModel):
     done: bool
     read_cnt: int
     attachment: Optional[bytes] = None
+    hidden: bool
     qa_type: QAType = Field(sa_column=Enum(QAType), default=QAType.CUSTOMER)  # qa_type 필드 추가
 
     @property
@@ -86,3 +90,29 @@ class QAUpdate(SQLModel):
     title: Optional[str] = None
     content: Optional[str] = None
     attachment: Optional[bytes] = None
+    hidden: Optional[bool] = None
+
+class QACreate(BaseModel):
+    writer: str
+    email: Optional[EmailStr] = None
+    password: str
+    title: str
+    content: Optional[str] = None
+    hidden: bool = False
+    qa_type: QAType = QAType.CUSTOMER
+
+class QARetrieve(BaseModel):
+    id: int
+    writer: str
+    email: Optional[str]
+    title: str
+    content: Optional[str]
+    c_date: Optional[str]
+    done: bool
+    read_cnt: int
+    hidden: bool
+    qa_type: QAType
+    attachment_filename: Optional[str] = None  # Add filename field
+
+    class Config:
+        from_attributes = True

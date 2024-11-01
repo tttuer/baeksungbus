@@ -239,11 +239,12 @@
             <div class="album py-5 bg-body-tertiary" style="margin-bottom: 30px">
                 <div class="row" style="margin: 5px">
                     <div class="col">
-                        <form class="needs-validation" novalidate onsubmit="handleSubmit()">
+                        <form class="needs-validation" novalidate onsubmit="handleSubmit()" action="/api/qas/"
+                              method="POST" enctype="multipart/form-data">
                             <div class="row g-3">
                                 <div class="col-6">
-                                    <label for="firstName" class="form-label">작성자</label>
-                                    <input type="text" class="form-control" id="firstName" placeholder="" value=""
+                                    <label for="writer" class="form-label">작성자</label>
+                                    <input type="text" class="form-control" id="writer" placeholder="" name="writer"
                                            required>
                                     <div class="invalid-feedback">
                                         작성자는 필수사항입니다.
@@ -252,7 +253,8 @@
 
                                 <div class="col-6">
                                     <label for="email" class="form-label">이메일 <span class="text-body-secondary">(Optional)</span></label>
-                                    <input type="email" class="form-control" id="email" placeholder="you@example.com">
+                                    <input type="email" class="form-control" id="email" placeholder="you@example.com"
+                                           name="email">
                                     <div class="invalid-feedback">
                                         적합한 이메일 주소를 입력해주세요.
                                     </div>
@@ -261,6 +263,7 @@
                                 <div class="col-6">
                                     <label for="password" class="form-label">비밀번호<span class="text-body-secondary">(글 수정, 삭제 시 필요합니다)</span></label>
                                     <input type="password" class="form-control" id="password" placeholder="****"
+                                           name="password"
                                            required>
                                     <div class="invalid-feedback">
                                         비밀번호를 입력해주세요
@@ -270,6 +273,7 @@
                                 <div class="col-12">
                                     <label for="title" class="form-label">제목</label>
                                     <input type="text" class="form-control" id="title" placeholder="제목을 입력해주세요"
+                                           name="title"
                                            required>
                                     <div class="invalid-feedback">
                                         제목을 입력해주세요
@@ -278,6 +282,7 @@
 
                                 <div class="col-12">
                                     <textarea class="form-control" id="body" placeholder="내용을 입력해주세요" rows="10"
+                                              name="content"
                                               required></textarea>
                                     <div class="invalid-feedback">
                                         내용을 입력해주세요
@@ -286,7 +291,7 @@
 
                                 <div class="col-12">
                                     <label for="attachment" class="form-label">첨부파일</label>
-                                    <input type="file" class="form-control" id="attachment">
+                                    <input type="file" class="form-control" id="attachment" name="attachment">
                                 </div>
 
                                 <div class="col-12 mt-4">
@@ -309,9 +314,12 @@
                             <hr class="my-4">
 
                             <div class="form-check">
-                                <input type="checkbox" class="form-check-input" id="hidden">
+                                <input type="checkbox" class="form-check-input" id="hidden" name="hidden">
                                 <label class="form-check-label" for="hidden">비밀글</label>
                             </div>
+
+                            <input type="hidden" name="qa_type" value="CUSTOMER">
+                            <input type="hidden" name="redirect_url" value="/qa">
 
 
                             <hr class="my-4">
@@ -337,6 +345,7 @@
         crossorigin="anonymous"></script>
 <script src="/static/js/form.js"></script>
 <script src="/static/js/checkout.js"></script>
+<script src="/static/js/submitQa.js"></script>
 
 
 </body>
