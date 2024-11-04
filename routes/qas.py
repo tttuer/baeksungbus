@@ -1,9 +1,12 @@
+import base64
 from datetime import datetime
 
 import pytz
-from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import RedirectResponse
+from sqlalchemy import desc
 from sqlalchemy.orm import selectinload
+from starlette.status import HTTP_401_UNAUTHORIZED
 
 from models.qa import QAWithAnswer, QAUpdate, QARetrieve
 
@@ -33,11 +36,11 @@ async def get_qas(
     total_count = session.exec(select(func.count()).select_from(QA).where(QA.qa_type == qa_type)).one()
     total_pages = (total_count + page_size - 1) // page_size
 
-    # 필요한 필드만 선택해서 가져오는 쿼리 작성
-
+    # 필요한 필드만 선택해서 역순으로 가져오는 쿼리 작성
     statement = (
         select(QA)
         .where(QA.qa_type == qa_type)
+        .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
         .offset(offset)
         .limit(page_size)
     )
@@ -57,10 +60,7 @@ async def get_qas(
             "attachment_filename": row.attachment_filename,
         }
         for index, row in enumerate(result)
-
     ]
-
-    qas_short.reverse()
 
     return {
         "qas": qas_short,
@@ -70,21 +70,43 @@ async def get_qas(
 
 
 # qa 상세보기 클릭했을때 조회
-@qa_router.get("/{id}", response_model=QAWithAnswer, response_model_exclude={"password", "answers.customer_qa_id"})
-async def get_qa(id: int, session: Session = Depends(get_session)) -> QAWithAnswer:
+@qa_router.get("/{id}", response_model=QAWithAnswer, response_model_exclude={"password"})
+async def get_qa(id: int, password: str = 'default-password', session: Session = Depends(get_session)) -> QAWithAnswer:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
     statement = select(QA).options(selectinload(QA.answers)).where(QA.id == id)
     qa = session.exec(statement).first()
 
     if not qa:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="CustomerQA not found",
-        )
-    return qa
+        raise HTTPException(status_code=404, detail="QA not found")
+    if qa.hidden and password != 'default-password' and qa.password != password:
+        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Password mismatch")
+
+    # attachment를 Base64로 인코딩
+    attachment_base64 = base64.b64encode(qa.attachment).decode("utf-8") if qa.attachment else None
+
+    # QAPublic 또는 QAWithAnswer 모델로 반환
+    return QAWithAnswer(
+        id=qa.id,
+        password=qa.password,
+        writer=qa.writer,
+        email=qa.email,
+        title=qa.title,
+        content=qa.content,
+        attachment=attachment_base64,
+        attachment_filename=qa.attachment_filename,
+        c_date=qa.c_date,
+        done=qa.done,
+        read_cnt=qa.read_cnt,
+        hidden=qa.hidden,
+        qa_type=qa.qa_type,
+        answers=qa.answers  # 예시로 직접 넣음
+    )
 
 
 # qa 생성
+from fastapi import HTTPException, status
+
+
 @qa_router.post("/", response_class=RedirectResponse)
 async def create_qa(
         writer: str = Form(...),
@@ -97,9 +119,21 @@ async def create_qa(
         attachment: UploadFile = File(None),
         redirect_url: str = Form(None),
         session: Session = Depends(get_session)) -> QARetrieve:
-    # Read file content and get file name
-    attachment_data = await attachment.read() if attachment else None
-    attachment_filename = attachment.filename if attachment else None
+    # 파일이 존재하는 경우 이미지 파일인지 확인
+    if attachment and attachment.filename != '':
+        if not attachment.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이미지 파일만 업로드할 수 있습니다."
+            )
+        attachment_data = await attachment.read()
+        attachment_filename = attachment.filename
+    else:
+        attachment_data = None
+        attachment_filename = None
+
+    # 이메일 빈 문자열을 None으로 변환
+    email = email if email else None
 
     # Create the QA object
     new_qa = QA(
@@ -108,7 +142,7 @@ async def create_qa(
         password=password,
         title=title,
         content=content,
-        attachment=attachment_data,  # Store the file data as bytes
+        attachment=attachment_data,
         hidden=hidden,
         qa_type=qa_type,
         c_date=get_kr_date().format('%Y-%m-%d'),
@@ -159,13 +193,24 @@ async def update_qa(id: int, password: str, update_qa: QAUpdate, session: Sessio
             return qa
 
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Password incorrect",
         )
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Customer QA not found",
     )
+
+
+@qa_router.get("/{id}/check_password")
+async def check_password(id: int, password: str, session: Session = Depends(get_session)):
+    qa = session.get(QA, id)
+
+    if not qa or qa.password != password:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Password incorrect",
+        )
 
 
 def raise_exception(empty_val, message: str):

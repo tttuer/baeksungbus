@@ -1,10 +1,8 @@
-from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Optional, List
 
 from pydantic import EmailStr, BaseModel
 from sqlmodel import SQLModel, Field, Relationship, Enum
-from starlette.datastructures import UploadFile
 
 from models.answers import Answer
 
@@ -13,6 +11,7 @@ from models.answers import Answer
 class QAType(PyEnum):
     CUSTOMER = "CUSTOMER"
     LOST = "LOST"
+
 
 class QABase(SQLModel):
     writer: str
@@ -32,6 +31,7 @@ class QABase(SQLModel):
     def c_date_formatted(self) -> str:
         return self.c_date.strftime('%Y-%m-%d')
 
+
 class QA(QABase, table=True):
     __tablename__ = 'qa'
     id: int = Field(primary_key=True, default=None)
@@ -50,6 +50,7 @@ class QA(QABase, table=True):
                 'read_cnt': 1,
             }
         }
+
 
 class QAShort(SQLModel):
     id: int
@@ -78,11 +79,15 @@ class QAShort(SQLModel):
             }
         }
 
+
 class QAPublic(QABase):
     id: int
+    attachment: Optional[str] = None  # Base64 인코딩된 문자열로 변환
+
 
 class QAWithAnswer(QAPublic):
-    answers: list[Answer] = []
+    answers: Optional[list[Answer]] = []
+
 
 class QAUpdate(SQLModel):
     writer: Optional[str] = None
@@ -92,6 +97,7 @@ class QAUpdate(SQLModel):
     attachment: Optional[bytes] = None
     hidden: Optional[bool] = None
 
+
 class QACreate(BaseModel):
     writer: str
     email: Optional[EmailStr] = None
@@ -100,6 +106,7 @@ class QACreate(BaseModel):
     content: Optional[str] = None
     hidden: bool = False
     qa_type: QAType = QAType.CUSTOMER
+
 
 class QARetrieve(BaseModel):
     id: int
