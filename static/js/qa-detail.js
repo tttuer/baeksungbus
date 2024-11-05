@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 document.getElementById("title").value = data.title;
                 document.getElementById("writer").value = data.writer;
                 document.getElementById("c_date").value = data.c_date;
+                document.getElementById("email").value = data.email;
 
                 // HTML로 콘텐츠 렌더링
                 const contentElement = document.getElementById("content");
@@ -70,4 +71,12 @@ document.addEventListener("DOMContentLoaded", async function () {
             alert("서버와 통신 중 문제가 발생했습니다.");
         }
     }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("id");
+    document.getElementById("editButton").onclick = function () {
+        window.location.href = `/qa/update?id=${id}`;
+    };
 });

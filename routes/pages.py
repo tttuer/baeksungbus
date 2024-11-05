@@ -67,3 +67,8 @@ async def notice(request: Request):
 @page_router.get("/qa/detail", response_class=HTMLResponse)
 async def qa_detail(request: Request):
     return templates.TemplateResponse("qa-detail.html", {"request": request})
+
+
+@page_router.get("/qa/update", response_class=HTMLResponse)
+async def qa_detail(request: Request):
+    return templates.TemplateResponse("qa-update.html", {"request": request})

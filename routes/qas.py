@@ -8,7 +8,7 @@ from sqlalchemy import desc
 from sqlalchemy.orm import selectinload
 from starlette.status import HTTP_401_UNAUTHORIZED
 
-from models.qa import QAWithAnswer, QAUpdate, QARetrieve
+from models.qa import QAWithAnswer, QARetrieve
 
 qa_router = APIRouter(
     tags=["Qa"],
@@ -70,7 +70,7 @@ async def get_qas(
 
 
 # qa 상세보기 클릭했을때 조회
-@qa_router.get("/{id}", response_model=QAWithAnswer, response_model_exclude={"password"})
+@qa_router.get("/{id}", response_model=QAWithAnswer)
 async def get_qa(id: int, password: str = 'default-password', session: Session = Depends(get_session)) -> QAWithAnswer:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
     statement = select(QA).options(selectinload(QA.answers)).where(QA.id == id)
@@ -82,7 +82,7 @@ async def get_qa(id: int, password: str = 'default-password', session: Session =
         raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Password mismatch")
 
     # attachment를 Base64로 인코딩
-    attachment_base64 = base64.b64encode(qa.attachment).decode("utf-8") if qa.attachment else None
+    attachment_base64 = base64.b64encode(qa.attachment).decode("cp949") if qa.attachment else None
 
     # QAPublic 또는 QAWithAnswer 모델로 반환
     return QAWithAnswer(
@@ -178,28 +178,55 @@ async def delete_qa(id: int, password: str, session: Session = Depends(get_sessi
     )
 
 
-@qa_router.patch("/{id}")
-async def update_qa(id: int, password: str, update_qa: QAUpdate, session: Session = Depends(get_session)) -> QA:
+@qa_router.patch("/{id}", response_class=RedirectResponse)
+async def update_qa(
+        id: int,
+        email: str = Form(None),
+        password: str = Form(...),
+        title: str = Form(...),
+        content: str = Form(None),
+        hidden: bool = Form(False),
+        attachment: UploadFile = File(None),
+        keepAttachment: str = Form("true"),
+        redirect_url: str = Form(None),
+        session: Session = Depends(get_session),
+) -> QA:
     qa = session.get(QA, id)
-    if qa:
-        if qa.password == password:
-            event_data = update_qa.model_dump(exclude_unset=True)
-            for key, value in event_data.items():
-                setattr(qa, key, value)
-            session.add(qa)
-            session.commit()
-            session.refresh(qa)
-
-            return qa
-
+    if not qa:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Password incorrect",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer QA not found",
         )
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Customer QA not found",
-    )
+
+    # 새 파일이 업로드되었거나 파일 삭제가 요청된 경우 처리
+    if keepAttachment == "false":
+        if attachment.filename != '':  # 새 파일이 업로드된 경우
+            if not attachment.content_type.startswith("image/"):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="이미지 파일만 업로드할 수 있습니다."
+                )
+            qa.attachment = await attachment.read()
+            qa.attachment_filename = attachment.filename
+        else:  # 파일 삭제만 요청된 경우
+            qa.attachment = None
+            qa.attachment_filename = None
+
+    # 이메일이 빈 문자열로 제출되었을 때 None으로 설정
+    qa.email = email or None
+    qa.password = password
+    qa.title = title
+    qa.content = content
+    qa.hidden = hidden
+    qa.c_date = get_kr_date().format('%Y-%m-%d')
+
+    # 변경 사항 저장
+    session.add(qa)
+    session.commit()
+    session.refresh(qa)
+
+    # 리다이렉션 수행
+    return RedirectResponse(url=redirect_url, status_code=303)
 
 
 @qa_router.get("/{id}/check_password")
