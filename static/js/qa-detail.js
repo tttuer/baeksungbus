@@ -1,4 +1,12 @@
 document.addEventListener("DOMContentLoaded", async function () {
+    const quill = new Quill('#editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: false  // 툴바 비활성화하여 읽기 전용으로 설정
+        },
+        readOnly: true  // Quill을 읽기 전용으로 설정
+    });
+
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("id");
 
@@ -12,13 +20,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 const pageTitle = document.getElementById("pageTitle");
 
                 // qaType 값에 따라 제목을 변경
-                if (qaType === "CUSTOMER") {
-                    pageTitle.textContent = "고객문의";
-                } else if (qaType === "LOST") {
-                    pageTitle.textContent = "분실물문의";
-                } else {
-                    pageTitle.textContent = "문의";
-                }
+                pageTitle.textContent = qaType === "CUSTOMER" ? "고객문의" : (qaType === "LOST" ? "분실물문의" : "문의");
 
                 // 필드에 데이터 채우기
                 document.getElementById("title").value = data.title;
@@ -26,43 +28,44 @@ document.addEventListener("DOMContentLoaded", async function () {
                 document.getElementById("c_date").value = data.c_date;
                 document.getElementById("email").value = data.email;
 
-                // HTML로 콘텐츠 렌더링
-                const contentElement = document.getElementById("content");
-                contentElement.innerHTML = data.content;  // HTML로 렌더링
-
-                // 첨부파일 미리보기 설정
-                if (data.attachment && data.attachment_filename) {
-                    const previewContainer = document.createElement("div");
-                    previewContainer.classList.add("mb-3");
-
-                    if (data.attachment_filename.match(/\.(jpg|jpeg|png|gif)$/i)) {  // 이미지 파일인지 확인
-                        const previewImage = document.createElement("img");
-                        previewImage.src = `data:image/png;base64,${data.attachment}`;
-                        previewImage.classList.add("img-thumbnail");
-                        previewImage.style.maxWidth = "100%";
-                        previewContainer.appendChild(previewImage);
-                    } else {
-                        // 이미지가 아닌 경우 파일명과 다운로드 링크 표시
-                        const fileLink = document.createElement("a");
-                        fileLink.href = `data:application/octet-stream;base64,${data.attachment}`;
-                        fileLink.download = data.attachment_filename;
-                        fileLink.textContent = `${data.attachment_filename} 다운로드`;
-                        previewContainer.appendChild(fileLink);
-                    }
-
-                    // content 상단에 미리보기 추가
-                    contentElement.parentNode.insertBefore(previewContainer, contentElement);
+                // 첨부파일이 이미지 파일일 경우 Quill 최상단에 추가
+                if (data.attachment && data.attachment_filename.match(/\.(jpg|jpeg|png|gif)$/i)) {
+                    const imageHTML = `<p><img src="data:image/png;base64,${data.attachment}" style="max-width: 100%;"></p>`;
+                    quill.clipboard.dangerouslyPasteHTML(0, imageHTML);  // 최상단에 이미지 추가
                 }
+
+                // Quill에 본문 내용 설정
+                quill.clipboard.dangerouslyPasteHTML(quill.getLength(), data.content);  // 본문 내용을 이미지 아래에 추가
+
+                // 첨부파일이 있는 경우에만 다운로드 링크 설정
+                if (data.attachment && data.attachment_filename) {
+                    const downloadAttachment = document.createElement("a");
+                    downloadAttachment.id = "downloadAttachment";
+                    downloadAttachment.href = `data:application/octet-stream;base64,${data.attachment}`;
+                    downloadAttachment.download = data.attachment_filename;
+                    downloadAttachment.textContent = `${data.attachment_filename} 다운로드`;
+                    downloadAttachment.style.display = "block";
+                    downloadAttachment.style.marginTop = "10px";
+
+                    // Quill 에디터 바로 아래에 첨부파일 다운로드 링크 추가
+                    const editorContainer = document.getElementById("editor");
+                    editorContainer.parentNode.insertBefore(downloadAttachment, editorContainer.nextSibling);
+                }
+
+                // 동적으로 Quill 높이 조정 (내용이 완전히 적용된 후)
+                setTimeout(adjustQuillHeight, 100);  // 조금의 지연 후 높이 조정
 
                 // 글 목록 버튼의 링크를 qaType에 따라 설정
                 const backToListButton = document.getElementById("backToListButton");
                 backToListButton.addEventListener("click", function () {
-                    if (qaType === "CUSTOMER") {
-                        window.location.href = "/qa";
-                    } else {
-                        window.location.href = "/lost";
-                    }
+                    window.location.href = qaType === "CUSTOMER" ? "/qa" : "/lost";
                 });
+
+                // 글 수정 버튼의 링크 설정
+                document.getElementById("editButton").onclick = function () {
+                    window.location.href = `/qa/update?id=${id}`;
+                };
+
             } else {
                 alert("글을 불러오는 데 실패했습니다.");
             }
@@ -71,12 +74,14 @@ document.addEventListener("DOMContentLoaded", async function () {
             alert("서버와 통신 중 문제가 발생했습니다.");
         }
     }
-});
 
-document.addEventListener("DOMContentLoaded", function () {
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get("id");
-    document.getElementById("editButton").onclick = function () {
-        window.location.href = `/qa/update?id=${id}`;
-    };
+    // Quill 내용에 따라 높이 조정
+    function adjustQuillHeight() {
+        const editorContainer = document.getElementById("editor");
+        const contentHeight = editorContainer.scrollHeight;
+        editorContainer.style.height = `${Math.max(contentHeight, 200)}px`;
+    }
+
+    // Quill 내용 변화에 따라 높이 자동 조정
+    quill.on('text-change', adjustQuillHeight);
 });

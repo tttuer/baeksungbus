@@ -1,7 +1,12 @@
 document.addEventListener("DOMContentLoaded", function () {
     'use strict';
 
-    const quill = new Quill('#editor', {theme: 'snow'});
+    // Quill 에디터 초기화
+    const quill = new Quill('#editor', {
+        theme: 'snow',
+        placeholder: '내용을 입력하세요...'
+    });
+
     const forms = document.querySelectorAll('.needs-validation');
     const captchaInput = document.getElementById("captcha");
     const captchaFeedback = document.querySelector(".captcha"); // 정확히 지정
@@ -12,6 +17,16 @@ document.addEventListener("DOMContentLoaded", function () {
     refreshCaptchaButton.addEventListener("click", function () {
         captchaImage.src = `/captcha_image?${new Date().getTime()}`;
     });
+
+    // Quill 높이 조절 함수
+    function adjustQuillHeight() {
+        const editorContainer = document.getElementById("editor");
+        const contentHeight = editorContainer.scrollHeight;
+        editorContainer.style.height = `${Math.max(contentHeight, 200)}px`; // 최소 높이 200px로 설정
+    }
+
+    // Quill 내용 변화에 따라 높이 자동 조정
+    quill.on('text-change', adjustQuillHeight);
 
     Array.from(forms).forEach(form => {
         form.addEventListener('submit', async event => {
@@ -65,4 +80,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     });
+
+    // 초기 Quill 높이 조정
+    adjustQuillHeight();
 });
