@@ -52,6 +52,16 @@ document.addEventListener("DOMContentLoaded", async function () {
                     // content 상단에 미리보기 추가
                     contentElement.parentNode.insertBefore(previewContainer, contentElement);
                 }
+
+                // 글 목록 버튼의 링크를 qaType에 따라 설정
+                const backToListButton = document.getElementById("backToListButton");
+                backToListButton.addEventListener("click", function () {
+                    if (qaType === "CUSTOMER") {
+                        window.location.href = "/qa";
+                    } else {
+                        window.location.href = "/lost";
+                    }
+                });
             } else {
                 alert("글을 불러오는 데 실패했습니다.");
             }
