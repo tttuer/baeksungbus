@@ -213,6 +213,21 @@ async def check_password(id: int, password: str, session: Session = Depends(get_
         )
 
 
+@qa_router.patch("/{id}/read")
+async def read(id: int, session: Session = Depends(get_session)):
+    qa = session.get(QA, id)
+    if not qa:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="QA not found",
+        )
+
+    qa.read_cnt += 1
+
+    session.commit()
+    session.refresh(qa)
+
+
 def raise_exception(empty_val, message: str):
     if empty_val == '':
         raise HTTPException(

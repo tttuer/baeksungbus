@@ -111,6 +111,12 @@ document.getElementById("checkPasswordButton").addEventListener("click", async (
         // 비밀번호가 맞으면 상세 페이지로 이동
         const passwordModal = bootstrap.Modal.getInstance(document.getElementById("passwordModal"));
         passwordModal.hide(); // 모달 닫기
+
+        // 조회수 증가 API 호출
+        await fetch(`/api/qas/${selectedQaId}/read`, {
+            method: "PATCH",
+        });
+
         window.location.href = `/qa/detail?id=${selectedQaId}`;
     } else {
         // 비밀번호가 틀렸을 때 오류 메시지 표시
