@@ -41,15 +41,16 @@ function renderQATable(qas) {
         `;
 
         // 제목 셀 클릭 이벤트
-        row.querySelector("td").addEventListener("click", () => {
+        row.querySelector("td").addEventListener("click", async () => {
+            selectedQaId = qa.id;
             if (qa.hidden) {
-                // 비밀번호가 필요한 경우 ID를 설정하고 모달 표시
-                selectedQaId = qa.id;
-                resetPasswordModal(); // 모달 초기화
+                // 비공개 글일 때 비밀번호 모달 표시
+                resetPasswordModal();
                 const passwordModal = new bootstrap.Modal(document.getElementById("passwordModal"));
                 passwordModal.show();
             } else {
-                // 비공개 글이 아닌 경우 상세 페이지로 바로 이동
+                // 비공개 글이 아닌 경우 조회수 증가 후 바로 상세 페이지로 이동
+                await fetch(`/api/qas/${qa.id}/read`, {method: "PATCH"});
                 window.location.href = `/qa/detail?id=${qa.id}`;
             }
         });
@@ -113,9 +114,7 @@ document.getElementById("checkPasswordButton").addEventListener("click", async (
         passwordModal.hide(); // 모달 닫기
 
         // 조회수 증가 API 호출
-        await fetch(`/api/qas/${selectedQaId}/read`, {
-            method: "PATCH",
-        });
+        await fetch(`/api/qas/${selectedQaId}/read`, {method: "PATCH"});
 
         window.location.href = `/qa/detail?id=${selectedQaId}`;
     } else {

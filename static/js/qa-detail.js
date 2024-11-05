@@ -24,7 +24,6 @@ document.addEventListener("DOMContentLoaded", async function () {
                 document.getElementById("title").value = data.title;
                 document.getElementById("writer").value = data.writer;
                 document.getElementById("c_date").value = data.c_date;
-                document.getElementById("read_cnt").value = data.read_cnt;
 
                 // HTML로 콘텐츠 렌더링
                 const contentElement = document.getElementById("content");

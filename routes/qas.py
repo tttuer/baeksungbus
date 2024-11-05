@@ -50,7 +50,7 @@ async def get_qas(
     qas_short = [
         {
             "id": row.id,
-            "num": index + 1,
+            "num": (page - 1) * page_size + index + 1,
             "title": row.title,
             "writer": row.writer,
             "c_date": row.c_date,
