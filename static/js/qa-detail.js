@@ -7,6 +7,14 @@ document.addEventListener("DOMContentLoaded", async function () {
         readOnly: true  // Quill을 읽기 전용으로 설정
     });
 
+    const commentQuill = new Quill('#commentEditor', {
+        theme: 'snow',
+        modules: {
+            toolbar: false  // 툴바 비활성화하여 읽기 전용으로 설정
+        },
+        readOnly: true  // 댓글 Quill도 읽기 전용으로 설정
+    });
+
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get("id");
 
@@ -50,6 +58,15 @@ document.addEventListener("DOMContentLoaded", async function () {
                     // Quill 에디터 바로 아래에 첨부파일 다운로드 링크 추가
                     const editorContainer = document.getElementById("editor");
                     editorContainer.parentNode.insertBefore(downloadAttachment, editorContainer.nextSibling);
+                }
+
+                // 댓글이 있는 경우 표시
+                if (data.answers) {  // data.comment에 댓글 정보가 있다고 가정
+                    document.getElementById("commentSection").style.display = "block";  // 댓글 영역 표시
+                    commentQuill.clipboard.dangerouslyPasteHTML(0, data.answers[0].content);  // 댓글 내용을 Quill에 설정
+
+                    document.getElementById("answerhr").style.display = "block";  // 댓글 영역 표시
+
                 }
 
                 // 동적으로 Quill 높이 조정 (내용이 완전히 적용된 후)
