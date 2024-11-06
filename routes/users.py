@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Response
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
 
 from auth.hash_password import HashPassword
@@ -38,7 +38,7 @@ async def signup(user: User, session=Depends(get_session)):
 
 
 @users_router.post('/login', response_model=TokenResponse)
-async def login(response: Response, user: OAuth2PasswordRequestForm = Depends(), session=Depends(get_session)):
+async def login(request: Request, user: OAuth2PasswordRequestForm = Depends(), session=Depends(get_session)):
     if user.username != 'bsbus':
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -58,8 +58,8 @@ async def login(response: Response, user: OAuth2PasswordRequestForm = Depends(),
 
     access_token = create_access_token(user_exist.id)
 
-    # Authorization 헤더에 Bearer 토큰을 추가
-    response.headers["Authorization"] = f"Bearer {access_token}"
+    # 세션에 토큰 저장
+    request.session["access_token"] = access_token
 
     # 여전히 JSON 응답으로 토큰도 반환
     return {

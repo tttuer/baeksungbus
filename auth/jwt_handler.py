@@ -19,6 +19,9 @@ def create_access_token(user: str):
     return token
 
 
+from starlette.responses import RedirectResponse
+
+
 def verify_access_token(token: str):
     try:
         data = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
@@ -27,14 +30,9 @@ def verify_access_token(token: str):
         if expire is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No access token supplied')
         if datetime.utcnow() > datetime.utcfromtimestamp(expire):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail='Token expired'
-            )
+            return RedirectResponse(url="/adm/login")
+
         return data
 
     except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='Invalid token'
-        )
+        return RedirectResponse(url="/adm/login")

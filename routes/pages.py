@@ -72,3 +72,14 @@ async def qa_detail(request: Request):
 @page_router.get("/qa/update", response_class=HTMLResponse)
 async def qa_detail(request: Request):
     return templates.TemplateResponse("qa-update.html", {"request": request})
+
+
+# admin
+@page_router.get("/adm/login", response_class=HTMLResponse)
+async def admin_login(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@page_router.get("/adm", response_class=HTMLResponse)
+async def admin(request: Request):
+    return templates.TemplateResponse("admin.html", {"request": request})
