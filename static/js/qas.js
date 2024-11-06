@@ -36,7 +36,7 @@ function renderQATable(qas) {
             <td style="cursor: pointer;">${qa.title}${qa.hidden ? '<i class="bi bi-file-lock ms-2" title="비공개 글"></i>' : ''}${qa.attachment_filename ? '<i class="bi bi bi-file-earmark-text ms-2" title="첨부파일"></i>' : ''}</td>
             <td>${qa.writer}</td>
             <td>${qa.c_date}</td>
-            <td>${qa.done ? "처리완료" : "처리중"}</td>
+            <td>${qa.done ? "답변완료" : "처리중"}</td>
             <td>${qa.read_cnt}</td>
         `;
 

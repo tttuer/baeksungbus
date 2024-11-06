@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 }
 
                 // 댓글이 있는 경우 표시
-                if (data.answers) {  // data.comment에 댓글 정보가 있다고 가정
+                if (data.answers && data.answers.length > 0) {  // data.comment에 댓글 정보가 있다고 가정
                     document.getElementById("commentSection").style.display = "block";  // 댓글 영역 표시
                     commentQuill.clipboard.dangerouslyPasteHTML(0, data.answers[0].content);  // 댓글 내용을 Quill에 설정
 
