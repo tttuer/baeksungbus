@@ -15,12 +15,10 @@ qa_router = APIRouter(
 )
 
 # qa의 전체 리스트 반환
-from fastapi import APIRouter, Depends, Query
+from fastapi import Depends, Query
 from sqlmodel import Session, select, func
 from models.qa import QA, QAType
 from database.connection import get_session
-
-qa_router = APIRouter()
 
 
 @qa_router.get("/", response_model=dict)

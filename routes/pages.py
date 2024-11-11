@@ -74,12 +74,27 @@ async def qa_detail(request: Request):
     return templates.TemplateResponse("qa-update.html", {"request": request})
 
 
+@page_router.get("/schedule", response_class=HTMLResponse)
+async def qa_detail(request: Request):
+    return templates.TemplateResponse("schedule.html", {"request": request})
+
+
+@page_router.get("/schedule/detail", response_class=HTMLResponse)
+async def qa_detail(request: Request):
+    return templates.TemplateResponse("schedule-detail.html", {"request": request})
+
+
 # admin
 @page_router.get("/adm/login", response_class=HTMLResponse)
 async def admin_login(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse("/admin/login.html", {"request": request})
 
 
 @page_router.get("/adm", response_class=HTMLResponse)
 async def admin(request: Request):
-    return templates.TemplateResponse("admin.html", {"request": request})
+    return templates.TemplateResponse("/admin/admin.html", {"request": request})
+
+
+@page_router.get("/adm/schedule", response_class=HTMLResponse)
+async def admin(request: Request):
+    return templates.TemplateResponse("/admin/schedule.html", {"request": request})

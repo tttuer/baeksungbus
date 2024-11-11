@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
 from auth.hash_password import HashPassword
@@ -66,3 +67,15 @@ async def login(request: Request, user: OAuth2PasswordRequestForm = Depends(), s
         'access_token': access_token,
         'token_type': 'Bearer'
     }
+
+
+@users_router.post("/logout")
+async def logout(request: Request, response: Response):
+    # 세션에 저장된 토큰을 삭제하여 서버에서 세션을 무효화
+    request.session.pop("access_token", None)
+
+    # 클라이언트 측에서도 쿠키나 localStorage에 있는 토큰을 지우게 안내
+    response = JSONResponse(content={"message": "Logged out successfully"}, status_code=status.HTTP_200_OK)
+    response.delete_cookie("access_token")  # 쿠키로 관리 중인 경우
+
+    return response

@@ -289,7 +289,13 @@
 
             <div class="table-responsive small">
                 <!-- 버튼을 오른쪽 끝으로 정렬 -->
-                <div class="d-flex justify-content-end mb-2" style=" margin: 0;">
+                <div class="d-flex justify-content-between align-items-center mb-2" style=" margin: 0;">
+                    <select class="form-select me-2" style="width: auto;">
+                        <option selected>전체</option>
+                        <option value="1">처리중</option>
+                        <option value="2">답변완료</option>
+                    </select>
+
                     <button type="button" class="btn btn-outline-dark"
                             onclick="window.location.href='/qa-form'">글쓰기
                     </button>
@@ -428,8 +434,8 @@
         </main>
     </div>
 </div>
-<script type="module" src="/static/js/auth.js"></script>
-<script type="module" src="/static/js/admin.js"></script>
+<script type="module" src="/js/auth.js"></script>
+<script type="module" src="/js/admin.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"

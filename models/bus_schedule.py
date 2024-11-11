@@ -3,13 +3,15 @@ from typing import Optional
 from pydantic import EmailStr, BaseModel
 from sqlmodel import SQLModel, Field
 
-from models.answers import Answer
-
 
 class BusScheduleBase(SQLModel):
     title: str
-    image_data: Optional[bytes] = None
-    image_name: Optional[str] = None
+    image_data1: Optional[bytes] = None
+    image_name1: Optional[str] = None
+    image_data2: Optional[bytes] = None
+    image_name2: Optional[str] = None
+    image_data3: Optional[bytes] = None
+    image_name3: Optional[str] = None
 
 
 class BusSchedule(BusScheduleBase, table=True):
@@ -21,13 +23,15 @@ class QAShort(SQLModel):
     id: int
 
 
-class BusSchedulePublic(BusScheduleBase):
+class BusSchedulePublic(BaseModel):
     id: int
-    attachment: Optional[str] = None  # Base64 인코딩된 문자열로 변환
-
-
-class BusScheduleWithAnswer(BusSchedulePublic):
-    answers: Optional[list[Answer]] = []
+    image_name1: Optional[str] = None  # Base64 인코딩된 문자열로 변환
+    image_name2: Optional[str] = None  # Base64 인코딩된 문자열로 변환
+    image_name3: Optional[str] = None  # Base64 인코딩된 문자열로 변환
+    image_data1: Optional[str] = None  # Base64 인코딩된 문자열로 변환
+    image_data2: Optional[str] = None  # Base64 인코딩된 문자열로 변환
+    image_data3: Optional[str] = None  # Base64 인코딩된 문자열로 변환
+    title: Optional[str] = None
 
 
 class QAUpdate(SQLModel):
@@ -46,7 +50,6 @@ class QACreate(BaseModel):
     title: str
     content: Optional[str] = None
     hidden: bool = False
-    qa_type: QAType = QAType.CUSTOMER
 
 
 class QARetrieve(BaseModel):
@@ -59,7 +62,6 @@ class QARetrieve(BaseModel):
     done: bool
     read_cnt: int
     hidden: bool
-    qa_type: QAType
     attachment_filename: Optional[str] = None  # Add filename field
 
     class Config:

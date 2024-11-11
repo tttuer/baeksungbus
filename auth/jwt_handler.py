@@ -12,7 +12,7 @@ settings = Settings()
 def create_access_token(user: str):
     payload = {
         "user": user,
-        "expires": time.time() + 3600
+        "expires": time.time() + 86400
     }
 
     token = jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
@@ -29,8 +29,21 @@ def verify_access_token(token: str):
 
         if expire is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No access token supplied')
+        return datetime.utcnow() < datetime.utcfromtimestamp(expire)
+
+    except JWTError:
+        return RedirectResponse(url="/adm/login")
+
+
+def get_access_token(token: str):
+    try:
+        data = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        expire = data.get('expires')
+
+        if expire is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No access token supplied')
         if datetime.utcnow() > datetime.utcfromtimestamp(expire):
-            return RedirectResponse(url="/adm/login")
+            return None
 
         return data
 
