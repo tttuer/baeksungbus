@@ -98,3 +98,8 @@ async def admin(request: Request):
 @page_router.get("/adm/schedule", response_class=HTMLResponse)
 async def admin(request: Request):
     return templates.TemplateResponse("/admin/schedule.html", {"request": request})
+
+
+@page_router.get("/adm/ddock", response_class=HTMLResponse)
+async def admin(request: Request):
+    return templates.TemplateResponse("/admin/ddock.html", {"request": request})
