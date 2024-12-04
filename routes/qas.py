@@ -21,7 +21,7 @@ from models.qa import QA, QAType
 from database.connection import get_session
 
 
-@qa_router.get("/", response_model=dict)
+@qa_router.get("", response_model=dict)
 async def get_qas(
         qa_type: QAType,
         page: int = Query(1, ge=1),
@@ -105,7 +105,7 @@ async def get_qa(id: int, password: str = 'default-password', session: Session =
 from fastapi import HTTPException, status
 
 
-@qa_router.post("/", response_class=RedirectResponse)
+@qa_router.post("", response_class=RedirectResponse)
 async def create_qa(
         writer: str = Form(...),
         email: str = Form(None),

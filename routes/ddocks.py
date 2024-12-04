@@ -17,7 +17,7 @@ from sqlmodel import Session, select
 from database.connection import get_session
 
 
-@ddock_router.get("/", response_model=dict)
+@ddock_router.get("", response_model=dict)
 async def get_ddocks(
         session: Session = Depends(get_session)
 ):
@@ -65,7 +65,7 @@ async def get_schedule(id: int, session: Session = Depends(get_session)):
 from fastapi import HTTPException, status
 
 
-@ddock_router.post("/", response_class=Response)
+@ddock_router.post("", response_class=Response)
 async def create_ddock(
         images: list[UploadFile] = File(...),
         user: str = Depends(authenticate),

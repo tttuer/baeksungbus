@@ -16,7 +16,7 @@ from sqlmodel import Session, select, func
 from database.connection import get_session
 
 
-@schedule_router.get("/", response_model=dict)
+@schedule_router.get("", response_model=dict)
 async def get_schedules(
         page: int = Query(1, ge=1),
         page_size: int = Query(20, ge=1, le=100),
@@ -78,7 +78,7 @@ async def get_schedule(id: int, session: Session = Depends(get_session)):
 from fastapi import HTTPException, status
 
 
-@schedule_router.post("/", response_class=Response)
+@schedule_router.post("", response_class=Response)
 async def create_schedule(
         title: str = Form(...),
         image1: UploadFile = File(None),

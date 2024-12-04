@@ -1,9 +1,9 @@
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Optional, List
+from typing import Optional
 
 from pydantic import EmailStr
-from sqlmodel import SQLModel, Field, Relationship, Enum
+from sqlmodel import SQLModel, Field, Enum
 
 from models.answers import Answer
 
@@ -14,17 +14,20 @@ class NoticeType(PyEnum):
     TTOCK = "TTOCK"
     NOTICE = "NOTICE"
 
+
 class NoticeBase(SQLModel):
     writer: str = '평택여객(주)'
     email: Optional[EmailStr] = None
     title: str
     content: Optional[str] = None
     attachment: Optional[bytes] = None
+    attachment_filename: Optional[str] = None
     c_date: Optional[datetime] = None
     done: bool = False
     read_cnt: int = 0
     notice_type: NoticeType = Field(sa_column=Enum(NoticeType), default=NoticeType.NOTICE)  # qa_type 필드 추가
     creator: Optional[str]
+
 
 class Notice(NoticeBase, table=True):
     __tablename__ = 'notice'
@@ -38,6 +41,7 @@ class Notice(NoticeBase, table=True):
             }
         }
 
+
 class NoticeShort(SQLModel):
     id: int
     title: str
@@ -45,7 +49,7 @@ class NoticeShort(SQLModel):
     c_date: str
     done: bool
     read_cnt: int
-    attachment: Optional[bytes]
+    attachment_filename: Optional[str]
     notice_type: NoticeType
 
     @property
@@ -64,11 +68,14 @@ class NoticeShort(SQLModel):
             }
         }
 
+
 class NoticePublic(NoticeBase):
     id: int
 
+
 class NoticeWithAnswer(NoticePublic):
     answers: list[Answer] = []
+
 
 class NoticeUpdate(SQLModel):
     title: Optional[str] = None

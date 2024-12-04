@@ -1,4 +1,4 @@
-import {authFetch} from "../auth";
+import {authFetch} from "/static/js/auth.js";
 
 document.addEventListener("DOMContentLoaded", () => {
     const submitButton = document.getElementById("submit-schedule-btn");
@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             // POST 요청 보내기
-            const response = await authFetch("/ddock", {
+            const response = await authFetch("/api/ddocks", {
                 method: "POST",
                 body: formData,
             });

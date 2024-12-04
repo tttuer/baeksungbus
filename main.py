@@ -9,6 +9,7 @@ from auth.authenticate import AuthMiddleware
 from routes.answers import answer_router
 from routes.bus_schedules import schedule_router
 from routes.captcha_route import captcha_router
+from routes.ddocks import ddock_router
 from routes.notices import notice_router
 from routes.pages import page_router
 from routes.qas import qa_router
@@ -34,6 +35,7 @@ api_router.include_router(qa_router, prefix='/qas')
 api_router.include_router(users_router, prefix='/users')
 api_router.include_router(notice_router, prefix='/notices')
 api_router.include_router(schedule_router, prefix='/schedules')
+api_router.include_router(ddock_router, prefix='/ddocks')
 api_router.include_router(captcha_router)
 
 # api_router를 메인 애플리케이션에 추가

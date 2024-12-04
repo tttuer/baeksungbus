@@ -14,8 +14,10 @@ answer_router = APIRouter(
     tags=["Answer"],
 )
 
-@answer_router.post("/", response_model=Answer)
-async def create_answer(new_answer: Answer, qa_id: int, user: str = Depends(authenticate), session=Depends(get_session)) -> Answer:
+
+@answer_router.post("", response_model=Answer)
+async def create_answer(new_answer: Answer, qa_id: int, user: str = Depends(authenticate),
+                        session=Depends(get_session)) -> Answer:
     if user != 'bsbus':
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -63,8 +65,10 @@ async def delete_answer(id: int, user: str = Depends(authenticate), session: Ses
         detail="Event not found",
     )
 
+
 @answer_router.patch("/{id}")
-async def update_answer(id: int, update_answer: AnswerUpdate, user: str = Depends(authenticate), session: Session = Depends(get_session)) -> Answer:
+async def update_answer(id: int, update_answer: AnswerUpdate, user: str = Depends(authenticate),
+                        session: Session = Depends(get_session)) -> Answer:
     answer = session.get(Answer, id)
     if answer.creator != user:
         raise HTTPException(
@@ -85,6 +89,7 @@ async def update_answer(id: int, update_answer: AnswerUpdate, user: str = Depend
         detail="Answer not found",
     )
 
+
 def raise_exception(val, message: str):
     if val == '' or not val:
         raise HTTPException(
@@ -92,10 +97,10 @@ def raise_exception(val, message: str):
             detail=message,
         )
 
+
 def get_kr_date():
     # KST 타임존을 설정
     kst = pytz.timezone('Asia/Seoul')
 
     # 현재 KST 날짜와 시간 가져오기
     return datetime.now(kst).strftime('%Y-%m-%d')
-

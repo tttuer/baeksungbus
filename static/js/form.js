@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 formData.append("content", quill.root.innerHTML);
 
                 // 실제 폼 데이터 전송
-                const submitResponse = await fetch('/api/qas/', {
+                const submitResponse = await fetch('/api/qas', {
                     method: 'POST',
                     body: formData
                 });
