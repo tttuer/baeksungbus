@@ -43,6 +43,7 @@ class Notice(NoticeBase, table=True):
 
 
 class NoticeShort(SQLModel):
+    num: int
     id: int
     title: str
     writer: str

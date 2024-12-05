@@ -42,6 +42,7 @@ async def get_notices(
     # 필요한 필드를 CustomerQAShort로 변환
     notices_short = [
         NoticeShort(
+            num=index + 1,
             id=row.id,
             title=row.title,
             writer=row.writer,
@@ -50,7 +51,7 @@ async def get_notices(
             read_cnt=row.read_cnt,
             attachment_filename=row.attachment_filename,
             notice_type=notice_type,
-        ) for row in result
+        ) for index, row in enumerate(result)
     ]
 
     return {
