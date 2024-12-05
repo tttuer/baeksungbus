@@ -22,21 +22,21 @@ async def get_ddocks(
         session: Session = Depends(get_session)
 ):
     statement = (
-        select(BusSchedule)
+        select(Ddock)
     )
     result = session.exec(statement).all()
 
-    schedules = [
+    ddocks = [
         {
             "id": row.id,
-            "image": base64.b64encode(row.image_data1).decode("cp949") if row.image_data1 else None
+            "image": base64.b64encode(row.image).decode("cp949") if row.image else None
 
         }
         for index, row in enumerate(result)
     ]
 
     return {
-        "schedules": schedules,
+        "ddocks": ddocks,
     }
 
 
