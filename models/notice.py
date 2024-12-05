@@ -1,4 +1,3 @@
-from datetime import datetime
 from enum import Enum as PyEnum
 from typing import Optional
 
@@ -22,7 +21,7 @@ class NoticeBase(SQLModel):
     content: Optional[str] = None
     attachment: Optional[bytes] = None
     attachment_filename: Optional[str] = None
-    c_date: Optional[datetime] = None
+    c_date: Optional[str] = None
     done: bool = False
     read_cnt: int = 0
     notice_type: NoticeType = Field(sa_column=Enum(NoticeType), default=NoticeType.NOTICE)  # qa_type 필드 추가

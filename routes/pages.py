@@ -84,6 +84,16 @@ async def qa_detail(request: Request):
     return templates.TemplateResponse("schedule-detail.html", {"request": request})
 
 
+@page_router.get("/notice", response_class=HTMLResponse)
+async def qa_detail(request: Request):
+    return templates.TemplateResponse("notice.html", {"request": request})
+
+
+@page_router.get("/notice/detail", response_class=HTMLResponse)
+async def qa_detail(request: Request):
+    return templates.TemplateResponse("notice-detail.html", {"request": request})
+
+
 # admin
 @page_router.get("/adm/login", response_class=HTMLResponse)
 async def admin_login(request: Request):
