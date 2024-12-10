@@ -1,7 +1,18 @@
 # routes/pages.py
 from fastapi import APIRouter, Request
+from pydantic_settings import BaseSettings
 from starlette.responses import HTMLResponse
 from starlette.templating import Jinja2Templates
+
+
+class Settings(BaseSettings):
+    kakao_api_key: str
+
+    class Config:
+        env_file = ".env"
+
+
+settings = Settings()
 
 # 템플릿 디렉토리 설정
 templates = Jinja2Templates(directory="templates")
@@ -31,7 +42,7 @@ async def ddock(request: Request):
 
 @page_router.get("/location", response_class=HTMLResponse)
 async def location(request: Request):
-    return templates.TemplateResponse("location.html", {"request": request})
+    return templates.TemplateResponse("location.html", {"request": request, "kakao_api_key": settings.kakao_api_key})
 
 
 @page_router.get("/qa", response_class=HTMLResponse)
