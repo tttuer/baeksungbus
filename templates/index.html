@@ -31,6 +31,16 @@
 
 
     <style>
+        /* .location 클래스에 링크 관련 스타일 설정 */
+        .location {
+            color: black; /* 기본 링크 색상을 검정색으로 설정 */
+        }
+
+        .location a:hover, a:visited {
+            text-decoration: none; /* 링크 밑줄 제거 */
+            color: black; /* 기본 텍스트 색상 유지 */
+        }
+
         .featurette-divider {
             margin-top: 20px; /* 리스트 높이에 따라 구분선이 내려감 */
         }
@@ -129,22 +139,11 @@
             <button type="button" data-bs-target="#myCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
         </div>
         <div class="carousel-inner">
-            <!--            <div class="carousel-item active">-->
-            <!--                <img src="/static/images/busscape.jpg" width="100%" alt="Bootstrap">-->
-            <!--            </div>-->
             <div class="carousel-item active">
                 <img src="/static/images/busstop.jpg" width="100%" height="600px" class="me-3"
                      alt="Bootstrap">
             </div>
         </div>
-        <!--        <button class="carousel-control-prev" type="button" data-bs-target="#myCarousel" data-bs-slide="prev">-->
-        <!--            <span class="carousel-control-prev-icon" aria-hidden="true"></span>-->
-        <!--            <span class="visually-hidden">Previous</span>-->
-        <!--        </button>-->
-        <!--        <button class="carousel-control-next" type="button" data-bs-target="#myCarousel" data-bs-slide="next">-->
-        <!--            <span class="carousel-control-next-icon" aria-hidden="true"></span>-->
-        <!--            <span class="visually-hidden">Next</span>-->
-        <!--        </button>-->
     </div>
 
     <hr class="featurette-divider">
@@ -155,20 +154,20 @@
         <!-- Three columns of text below the carousel -->
         <div class="row" style="height: 180px">
             <div class="col-lg-4">
-                <h4 class="fw-normal">공지사항</h4>
+                <h4 class="fw-normal"><a href="notice" class="location text-decoration-none">공지사항</a></h4>
                 <ul id="notice-list" class="notice-list">
                     <!-- 제목 리스트가 동적으로 추가됩니다 -->
                 </ul>
             </div><!-- /.col-lg-4 -->
             <div class="col-lg-4">
-                <h4 class="fw-normal">분실물문의</h4>
+                <h4 class="fw-normal"><a href="lost" class="location text-decoration-none">분실물문의</a></h4>
                 <ul id="qa-list" class="qa-list">
                     <!-- 제목 리스트가 동적으로 추가됩니다 -->
                 </ul>
             </div><!-- /.col-lg-4 -->
             <div class="col-lg-4">
-                <h4 class="fw-normal">고객센터</h4>
-                <p>And lastly this, the third column of representative placeholder content.</p>
+                <h4 class="fw-normal"><a href="location" class="location text-decoration-none">찾아오시는길</a></h4>
+                <a href="location" class="location text-decoration-none"><img src="/static/images/location.png"></a>
             </div><!-- /.col-lg-4 -->
         </div><!-- /.row -->
 

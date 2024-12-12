@@ -20,6 +20,7 @@
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.1/font/bootstrap-icons.css">
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
 
     <!-- Favicons -->
@@ -33,6 +34,18 @@
 
 
     <style>
+        /* 모든 disabled 요소의 배경색을 흰색으로 설정 */
+        .form-control:disabled, .form-control[disabled] {
+            background-color: #ffffff !important; /* 흰색 배경 */
+            color: #000000; /* 글자 색상 설정 (원하는 색으로 조정 가능) */
+        }
+
+        .table thead th,
+        .table tbody td, th {
+            text-align: center;
+            line-height: 2; /* 높이 증가 */
+        }
+
         .pics { /* 전체 케러셀 */
             width: 600px;
             float: left;
@@ -226,89 +239,82 @@
             {% include "base/sidebar.html" %}
         </div>
         <div class="col-md-9">
-            <h3 class="pb-4 mb-4 border-bottom">
+            <h3 id="pageTitle" class="pb-4 mb-4 border-bottom">
                 자격요건
             </h3>
 
             <div class="album py-5 bg-body-tertiary" style="margin-bottom: 30px">
-                <div class="container">
-                    <div class="row row-cols-1 row-cols-sm-2 g-3">
-                        <div class="col">
-                            <div class="card shadow-sm">
-                                <svg class="bd-placeholder-img card-img-top" width="100%" height="225"
-                                     xmlns="http://www.w3.org/2000/svg" role="img"
-                                     aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice"
-                                     focusable="false"><title>Placeholder</title>
-                                    <rect width="100%" height="100%" fill="#55595c"/>
-                                    <text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text>
-                                </svg>
-                                <div class="card-body">
-                                    <p class="card-text">This is a wider card with supporting text below as a
-                                        natural lead-in to additional content. This content is a little bit
-                                        longer.</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary">View
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary">Edit
-                                            </button>
-                                        </div>
-                                        <small class="text-body-secondary">9 mins</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card shadow-sm">
-                                <svg class="bd-placeholder-img card-img-top" width="100%" height="225"
-                                     xmlns="http://www.w3.org/2000/svg" role="img"
-                                     aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice"
-                                     focusable="false"><title>Placeholder</title>
-                                    <rect width="100%" height="100%" fill="#55595c"/>
-                                    <text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text>
-                                </svg>
-                                <div class="card-body">
-                                    <p class="card-text">This is a wider card with supporting text below as a
-                                        natural lead-in to additional content. This content is a little bit
-                                        longer.</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary">View
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary">Edit
-                                            </button>
-                                        </div>
-                                        <small class="text-body-secondary">9 mins</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col">
-                            <div class="card shadow-sm">
-                                <svg class="bd-placeholder-img card-img-top" width="100%" height="225"
-                                     xmlns="http://www.w3.org/2000/svg" role="img"
-                                     aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice"
-                                     focusable="false"><title>Placeholder</title>
-                                    <rect width="100%" height="100%" fill="#55595c"/>
-                                    <text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text>
-                                </svg>
-                                <div class="card-body">
-                                    <p class="card-text">This is a wider card with supporting text below as a
-                                        natural lead-in to additional content. This content is a little bit
-                                        longer.</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-outline-secondary">View
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary">Edit
-                                            </button>
-                                        </div>
-                                        <small class="text-body-secondary">9 mins</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <div class="row" style="margin: 5px">
+                    <div class="col">
+                        <h3><span class="badge bg-dark">승무직</span></h3>
+                        <p><b>상시모집, 서류접수는 내방 제출</b></p>
+                        <table class="table">
+                            <thead>
+                            <tr class="table-dark">
+                                <th colspan="3">승무사원 응시자격</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <th scope="row" class="text-start" style="width: 130px">경력</th>
+                                <td style="text-align: left">
+                                    버스 및 대형 화물 경력자
+                                </td>
+                            </tr>
 
+                            </tbody>
+
+                            <tbody>
+                            <tr>
+                                <th scope="row" class="text-start" style="width: 130px">무경력</th>
+                                <td style="text-align: left">
+                                    1종 대형면허, 버스운전자격증 소지자 중 상기 자격 미해당자
+                                </td>
+                            </tr>
+
+                            </tbody>
+                        </table>
+                        <p style="margin-bottom: 1px"><b style="color: #dc3545">※ 여객자동차운수사업법에 따라 운수종사자로서 결격사유가 없어야 함</b>
+                        </p>
+                        <p style="margin-bottom: 50px"><b style="color: #dc3545">※ 무경력자는 기능 연수(15일), 현장 연수(15일) 후 채용</b>
+                        </p>
+                        <h3><span class="badge bg-dark">정비 및 기타 관리직</span></h3>
+                        <p><b>인사채용계획에 의거 당사 홈페이지 채용공고 게시</b></p>
+                        <table class="table">
+                            <thead>
+                            <tr class="table-dark">
+                                <th colspan="3">정비기술직 응시자격</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>
+                                    대형자동차(버스분야) 정비 실무 경력자, 자동차 정비(검사) 관련 유자격자
+
+                                </td>
+                            </tr>
+
+                            </tbody>
+
+                        </table>
+
+                        <table class="table">
+                            <thead>
+                            <tr class="table-dark">
+                                <th colspan="3">관리직 응시자격</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr>
+                                <td>
+                                    채용공고에 별도 안내
+
+                                </td>
+                            </tr>
+
+                            </tbody>
+
+                        </table>
 
                     </div>
                 </div>
@@ -327,6 +333,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
 
 </body>
 </html>

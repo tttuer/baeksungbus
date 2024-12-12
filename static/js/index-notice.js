@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             isHidden = event.target.getAttribute("data-hidden") === "true"; // 숨김 여부 확인
             currentQaId = qaId;
 
-            window.location.href = `/notices/detail?id=${qaId}`;
+            window.location.href = `/notice/detail?id=${qaId}`;
 
         }
     });
