@@ -1,4 +1,5 @@
 import base64
+from functools import lru_cache
 
 from fastapi import APIRouter, UploadFile, File, Form, Response
 from fastapi.responses import RedirectResponse
@@ -17,27 +18,24 @@ from sqlmodel import Session, select
 from database.connection import get_session
 
 
-@ddock_router.get("", response_model=dict)
-async def get_ddocks(
-        session: Session = Depends(get_session)
-):
-    statement = (
-        select(Ddock)
-    )
+# 데이터베이스 쿼리 함수 캐싱
+@lru_cache(maxsize=100)
+def get_cached_ddocks(session: Session):
+    statement = select(Ddock)
     result = session.exec(statement).all()
-
-    ddocks = [
+    return [
         {
             "id": row.id,
             "image": base64.b64encode(row.image).decode("cp949") if row.image else None
-
         }
-        for index, row in enumerate(result)
+        for row in result
     ]
 
-    return {
-        "ddocks": ddocks,
-    }
+
+@ddock_router.get("", response_model=dict)
+async def get_ddocks(session: Session = Depends(get_session)):
+    ddocks = get_cached_ddocks(session)
+    return {"ddocks": ddocks}
 
 
 # qa 상세보기 클릭했을때 조회

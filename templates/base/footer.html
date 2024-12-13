@@ -5,3 +5,24 @@
         <a href="#">Back to top</a>
     </p>
 </footer>
+
+<style>
+    /* 기본 레이아웃 설정 */
+    html, body {
+        height: 100%;
+    }
+
+    body {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+    }
+
+    main {
+        flex: 1; /* 메인 콘텐츠가 남은 공간을 채우도록 설정 */
+    }
+
+    .footer {
+        flex-shrink: 0; /* 푸터가 줄어들지 않도록 설정 */
+    }
+</style>

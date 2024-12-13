@@ -4,7 +4,7 @@ let selectedQaId = null; // 현재 선택된 QA의 ID를 저장
 // QA 데이터를 API에서 가져오는 함수
 async function fetchQAs(page = 1) {
     const qaType = document.getElementById("qaType").value; // qa_type 값을 읽음
-    const response = await fetch(`/api/qas/?qa_type=${qaType}&page=${page}&page_size=${pageSize}`);
+    const response = await fetch(`/api/qas?qa_type=${qaType}&page=${page}&page_size=${pageSize}`);
     const data = await response.json();
     renderQATable(data.qas);
     renderPagination(data.page, data.total_pages);

@@ -16,26 +16,26 @@ users = {}
 hash_password = HashPassword()
 
 
-# 처음 bsbus 만들고 쓰이지 않음
-@users_router.post('/signup')
-async def signup(user: User, session=Depends(get_session)):
-    user_exist = session.get(User, user.id)
-    if user_exist:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail='Email already registered'
-        )
-
-    hashed_password = hash_password.create_hash(user.password)
-    user.password = hashed_password
-
-    session.add(user)
-    session.commit()
-    session.refresh(user)
-
-    return {
-        'message': 'User registered',
-    }
+# # 처음 bsbus 만들고 쓰이지 않음
+# @users_router.post('/signup')
+# async def signup(user: User, session=Depends(get_session)):
+#     user_exist = session.get(User, user.id)
+#     if user_exist:
+#         raise HTTPException(
+#             status_code=status.HTTP_409_CONFLICT,
+#             detail='Email already registered'
+#         )
+#
+#     hashed_password = hash_password.create_hash(user.password)
+#     user.password = hashed_password
+#
+#     session.add(user)
+#     session.commit()
+#     session.refresh(user)
+#
+#     return {
+#         'message': 'User registered',
+#     }
 
 
 @users_router.post('/login', response_model=TokenResponse)

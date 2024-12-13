@@ -3,7 +3,7 @@ let selectedQaId = null; // 현재 선택된 QA의 ID를 저장
 
 // QA 데이터를 API에서 가져오는 함수
 async function fetchQAs(page = 1) {
-    const response = await fetch(`/api/notices/?notice_type=NOTICE&page=${page}&page_size=${pageSize}`);
+    const response = await fetch(`/api/notices?notice_type=NOTICE&page=${page}&page_size=${pageSize}`);
     const data = await response.json();
     renderQATable(data.notices);
     renderPagination(data.page, data.total_pages);
