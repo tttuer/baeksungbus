@@ -8,27 +8,34 @@ function openDatabase() {
             if (!db.objectStoreNames.contains('ddocks')) {
                 db.createObjectStore('ddocks', {keyPath: 'id'}); // id 필드를 키로 설정
             }
+            if (!db.objectStoreNames.contains('meta')) {
+                db.createObjectStore('meta', {keyPath: 'key'}); // 메타데이터 저장
+            }
         };
 
-        request.onsuccess = (event) => {
-            resolve(event.target.result);
-        };
-
-        request.onerror = (event) => {
-            reject(event.target.error);
-        };
+        request.onsuccess = (event) => resolve(event.target.result);
+        request.onerror = (event) => reject(event.target.error);
     });
 }
 
-// IndexedDB에 데이터 저장
-async function saveToIndexedDB(ddocks) {
-    const db = await openDatabase();
-    const transaction = db.transaction('ddocks', 'readwrite');
-    const store = transaction.objectStore('ddocks');
+// 해시 생성 함수
+function generateHash(data) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(data)))
+        .then((hashBuffer) => Array.from(new Uint8Array(hashBuffer))
+            .map((b) => b.toString(16).padStart(2, '0'))
+            .join(''));
+}
 
-    ddocks.forEach((ddock, index) => {
-        store.put({id: index, image: ddock.image}); // id와 이미지 데이터를 저장
-    });
+// IndexedDB에 데이터 저장
+async function saveToIndexedDB(ddocks, hash) {
+    const db = await openDatabase();
+
+    const transaction = db.transaction(['ddocks', 'meta'], 'readwrite');
+    const ddockStore = transaction.objectStore('ddocks');
+    const metaStore = transaction.objectStore('meta');
+
+    ddocks.forEach((ddock) => ddockStore.put(ddock));
+    metaStore.put({key: 'hash', value: hash});
 
     return transaction.complete;
 }
@@ -36,23 +43,33 @@ async function saveToIndexedDB(ddocks) {
 // IndexedDB에서 데이터 가져오기
 async function getFromIndexedDB() {
     const db = await openDatabase();
-    const transaction = db.transaction('ddocks', 'readonly');
-    const store = transaction.objectStore('ddocks');
+    const transaction = db.transaction(['ddocks', 'meta'], 'readonly');
+    const ddockStore = transaction.objectStore('ddocks');
+    const metaStore = transaction.objectStore('meta');
 
-    return new Promise((resolve, reject) => {
-        const request = store.getAll();
+    const [data, meta] = await Promise.all([
+        new Promise((resolve) => {
+            const request = ddockStore.getAll();
+            request.onsuccess = () => resolve(request.result);
+        }),
+        new Promise((resolve) => {
+            const request = metaStore.get('hash');
+            request.onsuccess = () => resolve(request.result?.value || null);
+        })
+    ]);
 
-        request.onsuccess = () => {
-            resolve(request.result);
-        };
-
-        request.onerror = (event) => {
-            reject(event.target.error);
-        };
-    });
+    return {data, hash: meta};
 }
 
-// ddocks 데이터를 서버에서 가져오는 함수
+// 서버에서 데이터 가져오기
+async function fetchFromServer() {
+    const response = await fetch('/api/ddocks'); // FastAPI 엔드포인트
+    if (!response.ok) throw new Error('Failed to fetch ddocks');
+    const data = await response.json();
+    return data.ddocks;
+}
+
+// ddocks 데이터를 가져오는 함수
 async function fetchDdocks() {
     const editor = document.getElementById('editor');
 
@@ -65,32 +82,32 @@ async function fetchDdocks() {
 
     try {
         // IndexedDB에서 데이터 확인
-        const cachedData = await getFromIndexedDB();
-        if (cachedData && cachedData.length > 0) {
+        const {data: cachedData, hash: cachedHash} = await getFromIndexedDB();
+
+        if (cachedData && cachedHash) {
             console.log('Using cached data from IndexedDB');
             await renderDdocksSequentially(cachedData);
-            return; // 캐싱된 데이터로 렌더링 후 종료
+
+            // 서버 데이터와 해시 비교
+            const serverData = await fetchFromServer();
+            const serverHash = await generateHash(serverData);
+
+            if (serverHash !== cachedHash) {
+                console.log('Server data updated, refreshing cache');
+                await saveToIndexedDB(serverData, serverHash);
+                await renderDdocksSequentially(serverData);
+            }
+        } else {
+            console.log('No cached data, fetching from server');
+            const serverData = await fetchFromServer();
+            const serverHash = await generateHash(serverData);
+            await saveToIndexedDB(serverData, serverHash);
+            await renderDdocksSequentially(serverData);
         }
-
-        // 서버에서 데이터 요청
-        const response = await fetch('/api/ddocks'); // FastAPI 엔드포인트
-        if (!response.ok) {
-            throw new Error('Failed to fetch ddocks');
-        }
-
-        const data = await response.json();
-
-        // 데이터를 IndexedDB에 저장
-        await saveToIndexedDB(data.ddocks);
-
-        // 데이터를 렌더링
-        await renderDdocksSequentially(data.ddocks);
-
     } catch (error) {
         console.error('Error:', error);
-        editor.innerHTML = '<p>Failed to load data.</p>'; // 로딩 실패 메시지 표시
+        editor.innerHTML = '<p>Failed to load data.</p>';
     } finally {
-        // 로딩 스피너 제거 (모든 작업이 완료된 후 제거)
         spinner.remove();
     }
 }
@@ -105,18 +122,12 @@ async function renderDdocksSequentially(ddocks) {
             const img = document.createElement('img');
             img.src = `data:image/png;base64,${ddock.image}`;
             img.alt = 'Image';
-            img.style = 'max-width: 100%; margin-bottom: 10px;'; // 이미지 스타일 설정
+            img.style = 'max-width: 100%; margin-bottom: 10px;';
 
-            // 이미지가 로드될 때까지 대기
-            await new Promise((resolve) => {
-                img.onload = () => resolve();
-            });
-
-            // 이미지를 DOM에 추가
+            await new Promise((resolve) => (img.onload = () => resolve()));
             editor.appendChild(img);
 
-            // 약간의 지연 시간을 추가하여 더 자연스럽게 보이도록 설정 (선택 사항)
-            await new Promise((resolve) => setTimeout(resolve, 200)); // 200ms 지연
+            await new Promise((resolve) => setTimeout(resolve, 200)); // 지연 시간 추가
         }
     }
 }

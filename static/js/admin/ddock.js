@@ -1,116 +1,230 @@
 import {authFetch} from "/static/js/auth.js";
 
-document.addEventListener("DOMContentLoaded", () => {
-    const apiUrl = "/api/ddocks"; // API URL
-    const tableBody = document.getElementById("ddock-table-body");
-    const preview = document.getElementById("image-preview");
-    const previewImg = document.getElementById("preview-img");
-    const submitButton = document.getElementById("submit-schedule-btn");
+const apiUrl = "/api/ddocks"; // API URL
+const tableBody = document.getElementById("ddock-table-body");
+const preview = document.getElementById("image-preview");
+const previewImg = document.getElementById("preview-img");
+let attachedFile = null; // 단일 첨부파일을 저장하는 변수
 
-    // Fetch and render ddocks data
-    const fetchDdocks = async () => {
+// Fetch and render ddocks data
+const fetchDdocks = async () => {
+    try {
+        const response = await authFetch(apiUrl);
+        const data = await response.json();
+        const ddocks = data.ddocks;
+
+        tableBody.innerHTML = ddocks
+            .map(
+                (item, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>
+                        <span class="title-link" style="cursor: pointer;" data-id="${item.id}" data-image="${item.image}">
+                            ${item.image_name || "첨부파일 없음"}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-primary edit-btn" data-id="${item.id}">수정</button>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-danger delete-btn" data-id="${item.id}">삭제</button>
+                    </td>
+                </tr>
+            `
+            )
+            .join("");
+
+        // Attach events
+        attachEditDeleteEvents();
+        attachPreviewEvents();
+    } catch (error) {
+        console.error("Error fetching ddocks:", error);
+    }
+};
+
+// Attach events for edit and delete buttons
+const attachEditDeleteEvents = () => {
+    document.querySelectorAll(".edit-btn").forEach((button) => {
+        button.addEventListener("click", (e) => {
+            const ddockId = e.target.getAttribute("data-id");
+            editDdock(ddockId);
+        });
+    });
+
+    document.querySelectorAll(".delete-btn").forEach((button) => {
+        button.addEventListener("click", (e) => {
+            const ddockId = e.target.getAttribute("data-id");
+            deleteDdock(ddockId);
+        });
+    });
+};
+
+// Attach preview events for title links
+const attachPreviewEvents = () => {
+    document.querySelectorAll(".title-link").forEach((link) => {
+        link.addEventListener("mouseover", (event) => {
+            const image = link.getAttribute("data-image");
+            if (image) {
+                previewImg.src = `data:image/png;base64,${image}`;
+                preview.style.display = "block";
+                preview.style.top = `${event.clientY + 10}px`;
+                preview.style.left = `${event.clientX + 10}px`;
+            }
+        });
+
+        link.addEventListener("mouseout", () => {
+            preview.style.display = "none";
+        });
+    });
+};
+
+// Edit ddock
+const editDdock = (id) => {
+    resetEditModal();
+    authFetch(`/api/ddocks/${id}`)
+        .then((response) => response.json())
+        .then((ddock) => {
+            document.getElementById("editId").value = ddock.id;
+            attachedFile = ddock.image_name
+                ? {name: ddock.image_name, data: ddock.image}
+                : null;
+
+            renderAttachment();
+
+            const modal = new bootstrap.Modal(document.getElementById("editDdockModal"));
+            modal.show();
+        })
+        .catch((error) => console.error("Error loading ddock:", error));
+};
+
+// Delete ddock
+const deleteDdock = async (id) => {
+    if (confirm("정말로 삭제하시겠습니까?")) {
         try {
-            const response = await authFetch(apiUrl);
-            const data = await response.json();
-            const ddocks = data.ddocks;
-
-            tableBody.innerHTML = ""; // Clear table body
-
-            ddocks.forEach((item, index) => {
-                const row = document.createElement("tr");
-
-                // 번호
-                const numberCell = document.createElement("td");
-                numberCell.textContent = index + 1;
-                row.appendChild(numberCell);
-
-                // 제목
-                const titleCell = document.createElement("td");
-                const titleLink = document.createElement("span");
-                titleLink.textContent = item.image_name;
-                titleLink.style.cursor = "pointer";
-                titleLink.addEventListener("mouseover", (event) => {
-                    if (item.image) {
-                        previewImg.src = `data:image/png;base64,${item.image}`;
-                        preview.style.display = "block";
-                        preview.style.top = `${event.clientY + 10}px`;
-                        preview.style.left = `${event.clientX + 10}px`;
-                    }
-                });
-                titleLink.addEventListener("mouseout", () => {
-                    preview.style.display = "none";
-                });
-                titleCell.appendChild(titleLink);
-                row.appendChild(titleCell);
-
-                // 수정 버튼
-                const editCell = document.createElement("td");
-                editCell.classList.add("text-center");
-                const editButton = document.createElement("button");
-                editButton.textContent = "수정";
-                editButton.classList.add("btn", "btn-primary", "btn-sm");
-                editCell.appendChild(editButton);
-                row.appendChild(editCell);
-
-                // 삭제 버튼
-                const deleteCell = document.createElement("td");
-                deleteCell.classList.add("text-center");
-                const deleteButton = document.createElement("button");
-                deleteButton.textContent = "삭제";
-                deleteButton.classList.add("btn", "btn-danger", "btn-sm");
-                deleteCell.appendChild(deleteButton);
-                row.appendChild(deleteCell);
-
-                tableBody.appendChild(row);
+            const response = await authFetch(`${apiUrl}/${id}`, {
+                method: "DELETE",
             });
-        } catch (error) {
-            console.error("Error fetching ddocks:", error);
-        }
-    };
-
-    // Upload images
-    submitButton.addEventListener("click", async () => {
-        const inputElement = document.getElementById("imageUpload");
-        const files = inputElement.files; // Selected files
-        const formData = new FormData();
-
-        // Append files to FormData
-        for (let i = 0; i < files.length; i++) {
-            formData.append("images", files[i]);
-        }
-
-        try {
-            const response = await authFetch(apiUrl, {
-                method: "POST",
-                body: formData,
-            });
-
             if (response.ok) {
-                alert("Images uploaded successfully!");
-                // Close modal
-                const modal = document.getElementById("scheduleModal");
-                const modalInstance = bootstrap.Modal.getInstance(modal);
-                modalInstance.hide();
-
-                // Refresh ddocks data
+                alert("삭제에 성공했습니다.");
                 await fetchDdocks();
             } else {
-                alert("Failed to upload images.");
+                alert("Failed to delete ddock.");
             }
-        } catch (err) {
-            console.error("Error uploading images:", err);
-            alert("An error occurred during upload.");
+        } catch (error) {
+            console.error("Error deleting ddock:", error);
         }
-    });
+    }
+};
 
-    // Initialize ddocks data on page load
+// Reset and render attachment UI
+const resetEditModal = () => {
+    document.getElementById("editId").value = "";
+    attachedFile = null;
+    renderAttachment();
+};
+
+const renderAttachment = () => {
+    const fileContainer = document.getElementById("editAttachments");
+    fileContainer.innerHTML = attachedFile
+        ? `
+        <div class="d-flex align-items-center mb-2">
+            <span>첨부파일: ${attachedFile.name}</span>
+            <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="removeFile()">삭제</button>
+        </div>
+    `
+        : `<span>첨부파일 없음</span>`;
+};
+
+// Remove file from attachments
+window.removeFile = function () {
+    attachedFile = null;
+    renderAttachment();
+};
+
+// Upload images
+const submitDdockForm = async () => {
+    const inputElement = document.getElementById("imageUpload");
+    const files = inputElement.files;
+    const formData = new FormData();
+
+    for (let i = 0; i < files.length; i++) {
+        formData.append("images", files[i]);
+    }
+
+    try {
+        const response = await authFetch(apiUrl, {
+            method: "POST",
+            body: formData,
+        });
+
+        if (response.ok) {
+            alert("Images uploaded successfully!");
+            const modal = bootstrap.Modal.getInstance(document.getElementById("scheduleModal"));
+            modal.hide();
+            await fetchDdocks();
+        } else {
+            alert("Failed to upload images.");
+        }
+    } catch (error) {
+        console.error("Error uploading images:", error);
+    }
+};
+
+// Save edited ddock
+const saveEditedDdock = async () => {
+    const id = document.getElementById("editId").value;
+    const formData = new FormData();
+
+    const newFileInput = document.querySelector(".new-file-input");
+
+    // If no file exists and no new file is uploaded, delete the file
+    if (!attachedFile && !newFileInput.files.length) {
+        await deleteFile(id);
+        alert("파일이 삭제되었습니다.");
+        fetchDdocks();
+        const modal = bootstrap.Modal.getInstance(document.getElementById("editDdockModal"));
+        modal.hide();
+        return;
+    }
+
+    // Add new file if provided
+    if (newFileInput.files[0]) {
+        formData.append("image", newFileInput.files[0]);
+    } else if (attachedFile) {
+        formData.append("image_name", attachedFile.name);
+    }
+
+    authFetch(`/api/ddocks/${id}`, {
+        method: "PUT",
+        body: formData,
+    })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error("Update failed");
+            }
+            alert("수정 완료!");
+            fetchDdocks();
+            const modal = bootstrap.Modal.getInstance(document.getElementById("editDdockModal"));
+            modal.hide();
+        })
+        .catch((error) => console.error("Error:", error));
+};
+
+// Delete file from server
+const deleteFile = async (id) => {
+    try {
+        const response = await authFetch(`${apiUrl}/${id}`, {method: "DELETE"});
+        if (!response.ok) {
+            throw new Error("Failed to delete file");
+        }
+    } catch (error) {
+        console.error("Error deleting file:", error);
+    }
+};
+
+// Initialize the app
+document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("submit-schedule-btn").addEventListener("click", submitDdockForm);
+    document.getElementById("save-edit-btn").addEventListener("click", saveEditedDdock);
     fetchDdocks();
-
-    // Update preview position dynamically
-    document.addEventListener("mousemove", (event) => {
-        if (preview.style.display === "block") {
-            preview.style.top = `${event.clientY + 10}px`;
-            preview.style.left = `${event.clientX + 10}px`;
-        }
-    });
 });

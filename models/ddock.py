@@ -21,3 +21,4 @@ class QAShort(SQLModel):
 class DdockPublic(BaseModel):
     id: int
     image: Optional[str] = None
+    image_name: Optional[str] = None
