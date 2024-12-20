@@ -5,6 +5,7 @@ const tableBody = document.getElementById("ddock-table-body");
 const preview = document.getElementById("image-preview");
 const previewImg = document.getElementById("preview-img");
 let attachedFile = null; // 단일 첨부파일을 저장하는 변수
+let draggedRow = null; // 드래그 중인 행
 
 // Fetch and render ddocks data
 const fetchDdocks = async () => {
@@ -16,7 +17,7 @@ const fetchDdocks = async () => {
         tableBody.innerHTML = ddocks
             .map(
                 (item, index) => `
-                <tr>
+                <tr draggable="true" data-id="${item.id}" data-order="${item.order}">
                     <td>${index + 1}</td>
                     <td>
                         <span class="title-link" style="cursor: pointer;" data-id="${item.id}" data-image="${item.image}">
@@ -37,8 +38,76 @@ const fetchDdocks = async () => {
         // Attach events
         attachEditDeleteEvents();
         attachPreviewEvents();
+        attachDragAndDropEvents(); // 드래그앤드랍 이벤트 추가
     } catch (error) {
         console.error("Error fetching ddocks:", error);
+    }
+};
+
+// Attach drag and drop events
+const attachDragAndDropEvents = () => {
+    const rows = tableBody.querySelectorAll("tr");
+
+    rows.forEach((row) => {
+        row.addEventListener("dragstart", (e) => {
+            draggedRow = e.target; // 드래그 중인 행 설정
+            e.target.style.opacity = 0.5;
+        });
+
+        row.addEventListener("dragover", (e) => {
+            e.preventDefault(); // 기본 동작 방지 (드롭 가능하도록 설정)
+        });
+
+        row.addEventListener("drop", (e) => {
+            e.preventDefault();
+
+            if (draggedRow && draggedRow !== e.target) {
+                const targetRow = e.target.closest("tr");
+                tableBody.insertBefore(draggedRow, targetRow.nextSibling);
+
+                // 순서 갱신
+                updateOrder();
+            }
+        });
+
+        row.addEventListener("dragend", (e) => {
+            e.target.style.opacity = 1;
+            draggedRow = null; // 드래그 상태 초기화
+        });
+    });
+};
+
+// Update order based on table row positions
+const updateOrder = () => {
+    const rows = tableBody.querySelectorAll("tr");
+    const updatedOrder = Array.from(rows).map((row, index) => ({
+        id: row.getAttribute("data-id"),
+        order: index + 1, // 순서 업데이트
+    }));
+
+    console.log("Updated Order:", updatedOrder);
+
+    // 서버에 업데이트 요청
+    updateOrderOnServer(updatedOrder);
+};
+
+// Send updated order to server
+const updateOrderOnServer = async (updatedOrder) => {
+    try {
+        const response = await authFetch(`${apiUrl}/order`, {
+            method: "PATCH",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({orders: updatedOrder}),
+        });
+
+        if (response.ok) {
+            alert("순서가 성공적으로 업데이트되었습니다.");
+        } else {
+            throw new Error("Order update failed.");
+        }
+    } catch (error) {
+        console.error("Error updating order:", error);
+        alert("순서 업데이트에 실패했습니다.");
     }
 };
 

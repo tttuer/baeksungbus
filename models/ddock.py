@@ -7,6 +7,7 @@ from sqlmodel import SQLModel, Field
 class DdockBase(SQLModel):
     image: Optional[bytes] = None
     image_name: Optional[str] = None
+    order: int = None
 
 
 class Ddock(DdockBase, table=True):
@@ -22,3 +23,13 @@ class DdockPublic(BaseModel):
     id: int
     image: Optional[str] = None
     image_name: Optional[str] = None
+    order: int = None
+
+
+class DdockOrder(BaseModel):
+    id: int
+    order: int
+
+
+class OrderUpdateRequest(BaseModel):
+    orders: list[DdockOrder]

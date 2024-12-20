@@ -5,7 +5,7 @@ from fastapi import APIRouter, UploadFile, File, Form, Response
 from fastapi.responses import RedirectResponse
 
 from auth.authenticate import authenticate, check_admin
-from models.ddock import Ddock, DdockPublic
+from models.ddock import Ddock, DdockPublic, OrderUpdateRequest
 
 ddock_router = APIRouter(
     tags=["Ddock"],
@@ -13,14 +13,17 @@ ddock_router = APIRouter(
 
 # qa의 전체 리스트 반환
 from fastapi import Depends
-from sqlmodel import Session, select
+from sqlmodel import Session, select, desc, asc
 from database.connection import get_session
 
 
 # 데이터베이스 쿼리 함수 캐싱
 @lru_cache(maxsize=100)
 def get_cached_ddocks(session: Session):
-    statement = select(Ddock)
+    statement = (
+        select(Ddock)
+        .order_by(asc(Ddock.order))
+    )
     result = session.exec(statement).all()
     return [
         {
@@ -28,6 +31,7 @@ def get_cached_ddocks(session: Session):
             "id": row.id,
             "image": base64.b64encode(row.image).decode("cp949") if row.image else None,
             "image_name": row.image_name,
+            "order": row.order,
         }
         for index, row in enumerate(result)
     ]
@@ -54,6 +58,7 @@ async def get_ddock(id: int, user: str = Depends(authenticate), session: Session
         id=ddock.id,
         image=base64.b64encode(ddock.image).decode("cp949") if ddock.image else None,
         image_name=ddock.image_name,
+        order=ddock.order,
     )
 
 
@@ -68,13 +73,22 @@ async def create_ddock(
         session: Session = Depends(get_session)) -> Response:
     check_admin(user)
 
+    statement = (
+        select(Ddock)
+        .order_by(desc(Ddock.order))  # order 컬럼을 기준으로 내림차순 정렬
+        .limit(1)  # 상위 1개의 레코드만 가져옴
+    )
+    last_order = session.exec(statement).one().order
+
     # 이미지 처리 로직
     for image in images:
         content = await image.read()
         image_filename = image.filename
         print(f"Received image: {image.filename}, size: {len(content)} bytes")
 
-        ddock = Ddock(image=content, image_name=image_filename)
+        last_order += 1
+        ddock = Ddock(image=content, image_name=image_filename, order=last_order)
+
         session.add(ddock)
 
     session.commit()
@@ -138,6 +152,32 @@ async def update_ddock(
 
     # 리다이렉션 수행
     return RedirectResponse(url='/adm/ddock', status_code=303)
+
+
+@ddock_router.patch("/order")
+async def update_order(
+        request: OrderUpdateRequest,
+        user: str = Depends(authenticate),
+        session: Session = Depends(get_session),
+):
+    check_admin(user)
+
+    statement = (
+        select(Ddock)
+        .order_by(asc(Ddock.order))
+    )
+    all_ddocks = session.exec(statement).all()
+
+    # 순서 업데이트
+    for order_update in request.orders:
+        for ddock in all_ddocks:
+            if ddock.id == order_update.id:
+                ddock.order = order_update.order
+                session.add(ddock)  # 업데이트된 객체 추가
+
+    # 데이터베이스에 변경 사항 저장
+    session.commit()
+    return Response(status_code=status.HTTP_200_OK)
 
 
 def raise_exception(empty_val, message: str):
