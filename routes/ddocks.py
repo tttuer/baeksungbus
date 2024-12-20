@@ -25,10 +25,12 @@ def get_cached_ddocks(session: Session):
     result = session.exec(statement).all()
     return [
         {
+            "num": index,
             "id": row.id,
-            "image": base64.b64encode(row.image).decode("cp949") if row.image else None
+            "image": base64.b64encode(row.image).decode("cp949") if row.image else None,
+            "image_name": row.image_name,
         }
-        for row in result
+        for index, row in enumerate(result)
     ]
 
 
@@ -73,9 +75,10 @@ async def create_ddock(
     # 이미지 처리 로직
     for image in images:
         content = await image.read()
+        image_filename = image.filename
         print(f"Received image: {image.filename}, size: {len(content)} bytes")
 
-        ddock = Ddock(image=content)
+        ddock = Ddock(image=content, image_name=image_filename)
         session.add(ddock)
 
     session.commit()

@@ -6,6 +6,7 @@ from sqlmodel import SQLModel, Field
 
 class DdockBase(SQLModel):
     image: Optional[bytes] = None
+    image_name: Optional[str] = None
 
 
 class Ddock(DdockBase, table=True):
