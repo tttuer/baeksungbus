@@ -6,10 +6,23 @@ const preview = document.getElementById("image-preview");
 const previewImg = document.getElementById("preview-img");
 let attachedFile = null; // 단일 첨부파일을 저장하는 변수
 let draggedRow = null; // 드래그 중인 행
+// 로딩 스피너 엘리먼트 가져오기
+const loadingSpinner = document.getElementById("loading-spinner");
+
+const showSpinner = () => {
+    loadingSpinner.style.setProperty("display", "flex", "important");
+};
+
+const hideSpinner = () => {
+    loadingSpinner.style.setProperty("display", "none", "important");
+};
 
 // Fetch and render ddocks data
 const fetchDdocks = async () => {
     try {
+        // 로딩 스피너 표시
+        showSpinner()
+        console.log(loadingSpinner);
         const response = await authFetch(apiUrl);
         const data = await response.json();
         const ddocks = data.ddocks;
@@ -41,6 +54,8 @@ const fetchDdocks = async () => {
         attachDragAndDropEvents(); // 드래그앤드랍 이벤트 추가
     } catch (error) {
         console.error("Error fetching ddocks:", error);
+    } finally {
+        hideSpinner()
     }
 };
 
