@@ -73,12 +73,19 @@ async def create_ddock(
         session: Session = Depends(get_session)) -> Response:
     check_admin(user)
 
+    # Ddock 테이블에서 가장 최근 order 값을 가져오는 로직
     statement = (
         select(Ddock)
         .order_by(desc(Ddock.order))  # order 컬럼을 기준으로 내림차순 정렬
         .limit(1)  # 상위 1개의 레코드만 가져옴
     )
-    last_order = session.exec(statement).one().order
+
+    # 실행 후 결과가 있는지 확인
+    result = session.exec(statement).first()  # first()를 사용하면 결과가 없을 때 None 반환
+    if result:
+        last_order = result.order  # 기존 order 값 사용
+    else:
+        last_order = 0  # Ddock 테이블이 비어있으면 기본 값 0 설정
 
     # 이미지 처리 로직
     for image in images:
