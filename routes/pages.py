@@ -124,3 +124,8 @@ async def admin(request: Request):
 @page_router.get("/adm/ddock", response_class=HTMLResponse)
 async def admin(request: Request):
     return templates.TemplateResponse("/admin/ddock.html", {"request": request})
+
+
+@page_router.get("/adm/customer", response_class=HTMLResponse)
+async def admin(request: Request):
+    return templates.TemplateResponse("/admin/customer.html", {"request": request})
