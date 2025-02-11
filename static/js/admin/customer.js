@@ -72,6 +72,49 @@ const attachAnswerWriteEvent = () => {
                 }
             }
 
+            await fetchQAs(1, selectedValue);
+            const modal = bootstrap.Modal.getInstance(document.getElementById("detailModal"));
+            modal.hide(); // 모달 닫기
+        } catch (error) {
+            console.error("API 요청 실패:", error);
+            alert("서버 오류가 발생했습니다.");
+        }
+    });
+};
+
+// 답변 삭제 버튼 클릭 이벤트
+const attachAnswerDeleteEvent = () => {
+    const answerDeleteButton = document.getElementById("answerDelete");
+    answerDeleteButton.addEventListener("click", async () => {
+        if (!currentQaId) {
+            alert("QA ID를 확인할 수 없습니다.");
+            return;
+        }
+
+        const content = quillCommentEditor.root.innerHTML.trim(); // Quill Editor의 HTML 내용 가져오기
+        if (!content || content === "<p><br></p>") {
+            alert("답변 내용을 입력하세요.");
+            return;
+        }
+
+        try {
+            if (existingAnswerId) {
+                // 이미 답변이 있는 경우 DELETE 요청
+                const response = await authFetch(`/api/answers/${existingAnswerId}`, {
+                    method: "DELETE",
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert("답변이 성공적으로 삭제되었습니다!");
+                } else {
+                    const error = await response.json();
+                    alert(`오류: ${error.detail}`);
+                }
+            } else {
+                alert('답변이 존재하지 않습니다.');
+            }
+
             await fetchQAs(selectedValue);
             const modal = bootstrap.Modal.getInstance(document.getElementById("detailModal"));
             modal.hide(); // 모달 닫기
@@ -209,6 +252,34 @@ const showDetailModal = async (id) => {
 
             // document.getElementById("commentSection").style.display = "block";
             quillCommentEditor.clipboard.dangerouslyPasteHTML(0, data.answers[0].content || "");
+
+            const answerDeleteButton = document.getElementById("answerDelete");
+            answerDeleteButton.onclick = async () => {
+                try {
+                    if (!existingAnswerId) {
+                        alert("삭제할 답변이 없습니다.");
+                        return;
+                    }
+                    const response = await authFetch(`/api/answers/${existingAnswerId}`, {
+                        method: "DELETE",
+                    });
+                    if (response.ok) {
+                        await response.json();
+                        alert("답변이 성공적으로 삭제되었습니다!");
+                        // 삭제 후 필요한 후속 처리 (예: 모달 내용 갱신)
+                    } else {
+                        const error = await response.json();
+                        alert(`오류: ${error.detail}`);
+                    }
+
+                    await fetchQAs(1, selectedValue);
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("detailModal"));
+                    modal.hide(); // 모달 닫기
+                } catch (error) {
+                    console.error("답변 삭제 API 요청 실패:", error);
+                    alert("서버 오류가 발생했습니다.");
+                }
+            };
         }
 
 
@@ -220,6 +291,7 @@ const showDetailModal = async (id) => {
         modal.show();
 
         attachAnswerWriteEvent()
+        // attachAnswerDeleteEvent()
 
     } catch (error) {
         console.error("Error fetching QA details:", error);
@@ -259,12 +331,12 @@ const renderQAs = () => {
 };
 
 // 데이터 가져오기
-const fetchQAs = async (filter = "all") => {
+const fetchQAs = async (page = 1, filter = "all") => {
     try {
         showSpinner();
 
-        // 기본 쿼리 파라미터: qa_type
-        let queryParams = `?qa_type=CUSTOMER`;
+        // 기본 쿼리 파라미터: qa_type, page, page_size
+        let queryParams = `?qa_type=CUSTOMER&page=${page}&page_size=20`;
 
         // filter 값에 따른 done 파라미터 추가
         if (filter === "0") {
@@ -277,7 +349,11 @@ const fetchQAs = async (filter = "all") => {
         const data = await response.json();
 
         allQAs = data.qas; // 전체 데이터를 저장
+        console.log(allQAs)
         renderQAs(); // 초기 전체 데이터 렌더링
+
+        // 페이지네이션 렌더링 (API에서 total_pages 값을 함께 반환한다고 가정)
+        renderPagination(page, data.total_pages);
     } catch (error) {
         console.error("Error fetching QAs:", error);
     } finally {
@@ -285,17 +361,42 @@ const fetchQAs = async (filter = "all") => {
     }
 };
 
-// 셀렉트 박스 변경 이벤트 핸들러
-filterSelect.addEventListener("change", () => {
-    selectedValue = filterSelect.value; // 선택된 값 가져오기
+// 페이지네이션 렌더링 함수
+function renderPagination(current, totalPages) {
+    const pagination = document.getElementById("pagination");
+    pagination.innerHTML = "";
 
-    if (selectedValue === "all") {
-        fetchQAs();
-    } else if (selectedValue === "0") {
-        fetchQAs("0"); // 처리중 보기
-    } else if (selectedValue === "1") {
-        fetchQAs("1"); // 답변완료 보기
+    // 이전 버튼 생성
+    const prevButton = document.createElement("li");
+    prevButton.className = `page-item ${current === 1 ? "disabled" : ""}`;
+    prevButton.innerHTML = `<a class="page-link" href="#">Previous</a>`;
+    prevButton.addEventListener("click", () => {
+        if (current > 1) fetchQAs(current - 1, selectedValue);
+    });
+    pagination.appendChild(prevButton);
+
+    // 페이지 번호 버튼 생성
+    for (let page = 1; page <= totalPages; page++) {
+        const pageItem = document.createElement("li");
+        pageItem.className = `page-item ${page === current ? "active" : ""}`;
+        pageItem.innerHTML = `<a class="page-link" href="#">${page}</a>`;
+        pageItem.addEventListener("click", () => fetchQAs(page, selectedValue));
+        pagination.appendChild(pageItem);
     }
+
+    // 다음 버튼 생성
+    const nextButton = document.createElement("li");
+    nextButton.className = `page-item ${current === totalPages ? "disabled" : ""}`;
+    nextButton.innerHTML = `<a class="page-link" href="#">Next</a>`;
+    nextButton.addEventListener("click", () => {
+        if (current < totalPages) fetchQAs(current + 1, selectedValue);
+    });
+    pagination.appendChild(nextButton);
+}
+
+filterSelect.addEventListener("change", () => {
+    selectedValue = filterSelect.value;
+    fetchQAs(1, selectedValue);
 });
 
 // Initialize the app

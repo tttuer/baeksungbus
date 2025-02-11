@@ -31,10 +31,6 @@ async def get_qas(
 ):
     offset = (page - 1) * page_size
 
-    # 전체 항목 수와 총 페이지 계산
-    total_count = session.exec(select(func.count()).select_from(QA).where(QA.qa_type == qa_type)).one()
-    total_pages = (total_count + page_size - 1) // page_size
-
     if done is None:
         statement = (
             select(QA)
@@ -43,6 +39,9 @@ async def get_qas(
             .offset(offset)
             .limit(page_size)
         )
+
+        # 전체 항목 수와 총 페이지 계산
+        total_count = session.exec(select(func.count()).select_from(QA).where(QA.qa_type == qa_type)).one()
     elif done is True:
         statement = (
             select(QA)
@@ -52,6 +51,10 @@ async def get_qas(
             .offset(offset)
             .limit(page_size)
         )
+
+        # 전체 항목 수와 총 페이지 계산
+        total_count = session.exec(
+            select(func.count()).select_from(QA).where(QA.qa_type == qa_type).where(QA.done == True)).one()
     else:
         statement = (
             select(QA)
@@ -61,6 +64,11 @@ async def get_qas(
             .offset(offset)
             .limit(page_size)
         )
+
+        # 전체 항목 수와 총 페이지 계산
+        total_count = session.exec(
+            select(func.count()).select_from(QA).where(QA.qa_type == qa_type).where(QA.done == False)).one()
+
     result = session.exec(statement).all()
 
     # 필요한 필드를 CustomerQAShort로 변환
@@ -78,6 +86,8 @@ async def get_qas(
         }
         for index, row in enumerate(result)
     ]
+
+    total_pages = (total_count + page_size - 1) // page_size
 
     return {
         "qas": qas_short,
