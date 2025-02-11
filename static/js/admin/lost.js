@@ -156,7 +156,6 @@ const showDetailModal = async (id) => {
             throw new Error("Failed to fetch QA details");
         }
         const data = await response.json();
-        console.log(data)
 
         // 답변 존재 여부 판단
         const hasAnswer = data.answers && data.answers.length > 0;
@@ -185,12 +184,10 @@ const showDetailModal = async (id) => {
         if (data.attachment && data.attachment_filename.match(/\.(jpg|jpeg|png|gif)$/i)) {
             const imageHTML = `<p><img src="data:image/png;base64,${data.attachment}" style="max-width: 100%; display: block; margin: 10px 0;"></p>`;
             quill.clipboard.dangerouslyPasteHTML(quill.getLength(), imageHTML);
-            console.log("data.attachment")
         }
 
         // 본문 내용 설정
         if (data.content) {
-            console.log("data.content")
             quill.clipboard.dangerouslyPasteHTML(quill.getLength(), `<p>${data.content}</p>`);
         }
 
@@ -300,7 +297,6 @@ const fetchQAs = async (page = 1, filter = "all") => {
         const data = await response.json();
 
         allQAs = data.qas; // 전체 데이터를 저장
-        console.log(allQAs)
         renderQAs(); // 초기 전체 데이터 렌더링
 
         // 페이지네이션 렌더링 (API에서 total_pages 값을 함께 반환한다고 가정)

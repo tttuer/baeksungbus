@@ -349,7 +349,6 @@ const fetchQAs = async (page = 1, filter = "all") => {
         const data = await response.json();
 
         allQAs = data.qas; // 전체 데이터를 저장
-        console.log(allQAs)
         renderQAs(); // 초기 전체 데이터 렌더링
 
         // 페이지네이션 렌더링 (API에서 total_pages 값을 함께 반환한다고 가정)

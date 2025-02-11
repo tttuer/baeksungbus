@@ -22,7 +22,6 @@ const fetchDdocks = async () => {
     try {
         // 로딩 스피너 표시
         showSpinner()
-        console.log(loadingSpinner);
         const response = await authFetch(apiUrl);
         const data = await response.json();
         const ddocks = data.ddocks;
@@ -100,7 +99,6 @@ const updateOrder = () => {
         order: index + 1, // 순서 업데이트
     }));
 
-    console.log("Updated Order:", updatedOrder);
 
     // 서버에 업데이트 요청
     updateOrderOnServer(updatedOrder);
