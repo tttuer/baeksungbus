@@ -72,8 +72,7 @@ const attachAnswerWriteEvent = () => {
                 }
             }
 
-            await fetchQAs();
-            renderQAs(selectedValue); // 새 데이터를 다시 가져와서 렌더링
+            await fetchQAs(selectedValue);
             const modal = bootstrap.Modal.getInstance(document.getElementById("detailModal"));
             modal.hide(); // 모달 닫기
         } catch (error) {
@@ -85,12 +84,17 @@ const attachAnswerWriteEvent = () => {
 
 
 // 모달 동적으로 생성 함수
-const createDynamicModal = (id) => {
+const createDynamicModal = (id, hasAnswer) => {
     // 기존 모달 제거
     const existingModal = document.getElementById("detailModal");
     if (existingModal) {
         existingModal.remove();
     }
+
+    // 답변 삭제 버튼 HTML: 답변이 있을 때만 생성
+    const answerDeleteButtonHTML = hasAnswer
+        ? `<button type="button" class="btn btn-outline-dark" id="answerDelete" style="margin-left: 4px">답변 삭제</button>`
+        : "";
 
     // 새로운 모달 생성
     const modalHTML = `
@@ -131,6 +135,7 @@ const createDynamicModal = (id) => {
                             <hr class="my-4" id="answerhr" style="display: none;">
                             <div class="d-flex justify-content-end mb-2" style="margin: 0;">
                                 <button type="button" class="btn btn-outline-dark" id="answerWrite" style="margin-left: 4px">답변 작성</button>
+                                ${answerDeleteButtonHTML}
                             </div>
                         </form>
                     </div>
@@ -144,7 +149,6 @@ const createDynamicModal = (id) => {
 // 상세 보기 모달 표시
 const showDetailModal = async (id) => {
     try {
-        createDynamicModal(id); // 새로운 모달 동적으로 생성
 
         currentQaId = id; // 선택된 QA ID 저장
         existingAnswerId = null; // 기존 답변 ID 초기화
@@ -163,6 +167,12 @@ const showDetailModal = async (id) => {
             throw new Error("Failed to fetch QA details");
         }
         const data = await response.json();
+
+        // 답변 존재 여부 판단
+        const hasAnswer = data.answers && data.answers.length > 0;
+
+        createDynamicModal(id, hasAnswer); // 새로운 모달 동적으로 생성
+
 
         // 모달 내 입력 필드에 데이터 채우기
         document.getElementById("writer").value = data.writer || "";
@@ -192,7 +202,7 @@ const showDetailModal = async (id) => {
         });
 
         // 댓글 섹션 표시 (예: 답변 내용)
-        if (data.answers && data.answers.length > 0) {
+        if (hasAnswer) {
             existingAnswerId = data.answers[0].id
 
             quillCommentEditor.setContents([]); // 이전 답변 초기화
@@ -227,19 +237,9 @@ const attachRowClickEvents = () => {
     });
 };
 
-// 데이터 렌더링 함수
-const renderQAs = (filter = "all") => {
-    let filteredQAs;
-
-    if (filter === "0") {
-        filteredQAs = allQAs.filter((qa) => qa.done === false); // 처리중 데이터만
-    } else if (filter === "1") {
-        filteredQAs = allQAs.filter((qa) => qa.done === true); // 답변완료 데이터만
-    } else {
-        filteredQAs = allQAs; // 전체 데이터
-    }
-
-    tableBody.innerHTML = filteredQAs
+// 데이터 렌더링 함수 (서버에서 받은 데이터를 그대로 렌더링)
+const renderQAs = () => {
+    tableBody.innerHTML = allQAs
         .map((qa) => `
             <tr data-id="${qa.id}">
                 <td>${qa.num}</td>
@@ -251,7 +251,7 @@ const renderQAs = (filter = "all") => {
         `)
         .join("");
 
-    if (filteredQAs.length === 0) {
+    if (allQAs.length === 0) {
         tableBody.innerHTML = `<tr><td colspan="5" class="text-center">데이터가 없습니다.</td></tr>`;
     }
 
@@ -259,14 +259,25 @@ const renderQAs = (filter = "all") => {
 };
 
 // 데이터 가져오기
-const fetchQAs = async () => {
+const fetchQAs = async (filter = "all") => {
     try {
         showSpinner();
-        const response = await authFetch(`${apiUrl}?qa_type=CUSTOMER`);
+
+        // 기본 쿼리 파라미터: qa_type
+        let queryParams = `?qa_type=CUSTOMER`;
+
+        // filter 값에 따른 done 파라미터 추가
+        if (filter === "0") {
+            queryParams += `&done=false`;
+        } else if (filter === "1") {
+            queryParams += `&done=true`;
+        }
+
+        const response = await authFetch(`${apiUrl}${queryParams}`);
         const data = await response.json();
 
         allQAs = data.qas; // 전체 데이터를 저장
-        renderQAs("all"); // 초기 전체 데이터 렌더링
+        renderQAs(); // 초기 전체 데이터 렌더링
     } catch (error) {
         console.error("Error fetching QAs:", error);
     } finally {
@@ -279,11 +290,11 @@ filterSelect.addEventListener("change", () => {
     selectedValue = filterSelect.value; // 선택된 값 가져오기
 
     if (selectedValue === "all") {
-        renderQAs("all");
+        fetchQAs();
     } else if (selectedValue === "0") {
-        renderQAs("0"); // 처리중 보기
+        fetchQAs("0"); // 처리중 보기
     } else if (selectedValue === "1") {
-        renderQAs("1"); // 답변완료 보기
+        fetchQAs("1"); // 답변완료 보기
     }
 });
 
