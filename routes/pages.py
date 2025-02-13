@@ -108,34 +108,34 @@ async def qa_detail(request: Request):
 # admin
 @page_router.get("/adm/login", response_class=HTMLResponse)
 async def admin_login(request: Request):
-    return templates.TemplateResponse("/admin/login.html", {"request": request})
+    return templates.TemplateResponse("admin/login.html", {"request": request})
 
 
 @page_router.get("/adm", response_class=HTMLResponse)
 async def admin(request: Request):
-    return templates.TemplateResponse("/admin/admin.html", {"request": request})
+    return templates.TemplateResponse("admin/admin.html", {"request": request})
 
 
 @page_router.get("/adm/schedule", response_class=HTMLResponse)
 async def admin(request: Request):
-    return templates.TemplateResponse("/admin/schedule.html", {"request": request})
+    return templates.TemplateResponse("admin/schedule.html", {"request": request})
 
 
 @page_router.get("/adm/ddock", response_class=HTMLResponse)
 async def admin(request: Request):
-    return templates.TemplateResponse("/admin/ddock.html", {"request": request})
+    return templates.TemplateResponse("admin/ddock.html", {"request": request})
 
 
 @page_router.get("/adm/customer", response_class=HTMLResponse)
 async def admin(request: Request):
-    return templates.TemplateResponse("/admin/customer.html", {"request": request})
+    return templates.TemplateResponse("admin/customer.html", {"request": request})
 
 
 @page_router.get("/adm/lost", response_class=HTMLResponse)
 async def admin(request: Request):
-    return templates.TemplateResponse("/admin/lost.html", {"request": request})
+    return templates.TemplateResponse("admin/lost.html", {"request": request})
 
 
 @page_router.get("/adm/notice", response_class=HTMLResponse)
 async def admin(request: Request):
-    return templates.TemplateResponse("/admin/notice.html", {"request": request})
+    return templates.TemplateResponse("admin/notice.html", {"request": request})
