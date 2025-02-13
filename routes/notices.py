@@ -8,7 +8,7 @@ from sqlmodel import Session, select, func
 
 from auth.authenticate import authenticate
 from database.connection import get_session
-from models.notice import Notice, NoticeShort, NoticeType, NoticeWithAnswer, NoticeUpdate
+from models.notice import Notice, NoticeType, NoticeWithAnswer, NoticeUpdate
 
 notice_router = APIRouter(
     tags=["Notice"],
@@ -18,7 +18,7 @@ notice_router = APIRouter(
 @notice_router.get("", response_model=dict)
 # qa의 전체 리스트 반환
 async def get_notices(
-        notice_type: NoticeType,
+        notice_type: NoticeType = NoticeType.NOTICE,
         page: int = Query(1, ge=1),  # 기본 페이지 번호는 1
         page_size: int = Query(20, ge=1, le=100),  # 페이지 크기는 1~100 사이, 기본 20
         session: Session = Depends(get_session)
@@ -41,17 +41,18 @@ async def get_notices(
 
     # 필요한 필드를 CustomerQAShort로 변환
     notices_short = [
-        NoticeShort(
-            num=index + 1,
-            id=row.id,
-            title=row.title,
-            writer=row.writer,
-            c_date=row.c_date,
-            done=row.done,
-            read_cnt=row.read_cnt,
-            attachment_filename=row.attachment_filename,
-            notice_type=notice_type,
-        ) for index, row in enumerate(result)
+        {
+            "num": (page - 1) * page_size + index + 1,
+            "id": row.id,
+            "title": row.title,
+            "writer": row.writer,
+            "c_date": row.c_date,
+            "done": row.done,
+            "read_cnt": row.read_cnt,
+            "attachment_filename": row.attachment_filename,
+            "notice_type": notice_type,
+        }
+        for index, row in enumerate(result)
     ]
 
     return {

@@ -134,3 +134,8 @@ async def admin(request: Request):
 @page_router.get("/adm/lost", response_class=HTMLResponse)
 async def admin(request: Request):
     return templates.TemplateResponse("/admin/lost.html", {"request": request})
+
+
+@page_router.get("/adm/notice", response_class=HTMLResponse)
+async def admin(request: Request):
+    return templates.TemplateResponse("/admin/notice.html", {"request": request})
