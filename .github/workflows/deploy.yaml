@@ -39,6 +39,10 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "K3s 서버에서 pyeongtaek-app 배포 재시작..."
+            echo "🔐 .env 파일 생성 중..."
+            echo -e "${{ secrets.ENV_VARS }}" > /home/${{ secrets.SSH_USER }}/my-app/.env
+            chmod 600 /home/${{ secrets.SSH_USER }}/my-app/.env
+            echo "✅ .env 파일 생성 완료!"
+
+            # 배포 재시작
             kubectl rollout restart deployment/pyeongtaek-app
-            echo "배포 재시작 완료!"
