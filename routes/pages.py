@@ -1,7 +1,9 @@
 # routes/pages.py
+import os
+
 from fastapi import APIRouter, Request
 from pydantic_settings import BaseSettings
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse, FileResponse
 from starlette.templating import Jinja2Templates
 
 
@@ -141,3 +143,17 @@ async def admin(request: Request):
 @page_router.get("/adm/notice", response_class=HTMLResponse)
 async def admin(request: Request):
     return templates.TemplateResponse("admin/notice.html", {"request": request})
+
+
+# robots, sitemap
+# sitemap.xml을 루트(`/sitemap.xml`)에서 제공하도록 라우트 추가
+@page_router.get("/sitemap.xml", response_class=FileResponse)
+async def sitemap():
+    sitemap_path = os.path.join("static", "sitemap.xml")
+    return FileResponse(sitemap_path, media_type="application/xml")
+
+
+@page_router.get("/robots.txt", response_class=FileResponse)
+async def sitemap():
+    robots_path = os.path.join("static", "robots.txt")
+    return FileResponse(robots_path, media_type="text/plain")
