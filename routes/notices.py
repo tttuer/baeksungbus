@@ -5,10 +5,11 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi import Query
 from sqlalchemy import desc
 from sqlmodel import Session, select, func
+from starlette.responses import RedirectResponse
 
 from auth.authenticate import authenticate
 from database.connection import get_session
-from models.notice import Notice, NoticeType, NoticeWithAnswer, NoticeUpdate
+from models.notice import Notice, NoticeType, NoticeUpdate, NoticeRequest, NoticePublic
 
 notice_router = APIRouter(
     tags=["Notice"],
@@ -63,27 +64,31 @@ async def get_notices(
 
 
 # qa 상세보기 클릭했을때 조회
-@notice_router.get("/{id}", response_model=NoticeWithAnswer, response_model_exclude={"password"})
-async def get_notice(id: int, session: Session = Depends(get_session)) -> NoticeWithAnswer:
+@notice_router.get("/{id}", response_model=NoticePublic)
+async def get_notice(id: int, session: Session = Depends(get_session)) -> NoticePublic:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
-    statement = select(Notice).where(Notice.id == id)
-    notice = session.exec(statement).first()
+    notice = session.get(Notice, id)
 
     if not notice:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Notice not found",
         )
-    return notice
+
+    return notice.to_notice_public()
 
 
 @notice_router.post("", response_model=Notice)
 # qa 생성
-async def create_notice(new_notice: Notice, user: str = Depends(authenticate), session=Depends(get_session)) -> Notice:
+async def create_notice(
+        notice_request: NoticeRequest = Depends(NoticeRequest.as_form),
+        user: str = Depends(authenticate),
+        session=Depends(get_session)):
     check_admin(user)
 
-    raise_exception(new_notice.writer, "Writer cannot be blank")
-    raise_exception(new_notice.title, "Title cannot be blank")
+    raise_exception(notice_request.title, "Title cannot be blank")
+
+    new_notice = await notice_request.to_notice()
 
     new_notice.c_date = get_kr_date().format('%Y-%m-%d')
     new_notice.creator = user
@@ -92,7 +97,7 @@ async def create_notice(new_notice: Notice, user: str = Depends(authenticate), s
     session.commit()
     session.refresh(new_notice)
 
-    return new_notice
+    return RedirectResponse(url='/adm/notice', status_code=303)
 
 
 # qa 삭제

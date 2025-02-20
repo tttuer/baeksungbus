@@ -79,7 +79,7 @@ function editSchedule(id) {
 
             // Base64 데이터를 첨부파일 리스트로 변환
             attachedFiles = [];
-            if (schedule.image_name1) attachedFiles.push({name: schedule.image_name1, data: schedule.image_name1});
+            if (schedule.image_name1) attachedFiles.push({name: schedule.image_name1, data: schedule.image1});
             if (schedule.image_name2) attachedFiles.push({name: schedule.image_name2, data: schedule.image2});
             if (schedule.image_name3) attachedFiles.push({name: schedule.image_name3, data: schedule.image3});
 

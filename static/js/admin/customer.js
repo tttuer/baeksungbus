@@ -5,6 +5,7 @@ const tableBody = document.getElementById("qa-table-body");
 const loadingSpinner = document.getElementById("loading-spinner");
 const filterSelect = document.querySelector(".form-select");
 let currentQaId = null; // 현재 선택된 QA ID 저장
+let quill = null;
 let quillCommentEditor = null; // Quill Editor 객체
 let existingAnswerId = null; // 기존 답변 ID 저장
 let selectedValue = null;
@@ -192,17 +193,8 @@ const createDynamicModal = (id, hasAnswer) => {
 // 상세 보기 모달 표시
 const showDetailModal = async (id) => {
     try {
-
-        currentQaId = id; // 선택된 QA ID 저장
-        existingAnswerId = null; // 기존 답변 ID 초기화
-
-        const quill = new Quill('#editor', {
-            theme: 'snow',
-            modules: {
-                toolbar: false, // 툴바 비활성화하여 읽기 전용으로 설정
-            },
-            readOnly: true, // Quill을 읽기 전용으로 설정
-        });
+        currentQaId = id;
+        existingAnswerId = null;
 
         // API 호출로 상세 정보 가져오기
         const response = await authFetch(`${apiUrl}/${id}`);
@@ -214,8 +206,17 @@ const showDetailModal = async (id) => {
         // 답변 존재 여부 판단
         const hasAnswer = data.answers && data.answers.length > 0;
 
-        createDynamicModal(id, hasAnswer); // 새로운 모달 동적으로 생성
+        // 모달 동적으로 생성 (모달 내 #editor 요소가 생성됨)
+        createDynamicModal(id, hasAnswer);
 
+        // 모달 내 요소들이 DOM에 추가된 후, Quill 에디터 초기화
+        const quill = new Quill('#editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: false,
+            },
+            readOnly: true,
+        });
 
         // 모달 내 입력 필드에 데이터 채우기
         document.getElementById("writer").value = data.writer || "";
@@ -223,11 +224,9 @@ const showDetailModal = async (id) => {
         document.getElementById("title").value = data.title || "";
         document.getElementById("c_date").value = data.c_date || "";
 
-        // Quill 에디터 초기화
         quill.setContents([]); // 기존 내용을 초기화
 
-
-        // 첨부파일이 이미지 파일일 경우 본문 아래에 추가
+        // 첨부파일이 이미지 파일인 경우
         if (data.attachment && data.attachment_filename.match(/\.(jpg|jpeg|png|gif)$/i)) {
             const imageHTML = `<p><img src="data:image/png;base64,${data.attachment}" style="max-width: 100%; display: block; margin: 10px 0;"></p>`;
             quill.clipboard.dangerouslyPasteHTML(quill.getLength(), imageHTML);
@@ -238,21 +237,18 @@ const showDetailModal = async (id) => {
             quill.clipboard.dangerouslyPasteHTML(quill.getLength(), `<p>${data.content}</p>`);
         }
 
-        // Quill Editor 초기화 (답변 작성용)
+        // 답변 작성용 Quill Editor 초기화 (댓글 섹션)
         quillCommentEditor = new Quill("#commentEditor", {
             theme: "snow",
-
         });
 
-        // 댓글 섹션 표시 (예: 답변 내용)
+        // 답변이 존재하는 경우 기존 답변 내용 로드
         if (hasAnswer) {
-            existingAnswerId = data.answers[0].id
-
-            quillCommentEditor.setContents([]); // 이전 답변 초기화
-
-            // document.getElementById("commentSection").style.display = "block";
+            existingAnswerId = data.answers[0].id;
+            quillCommentEditor.setContents([]);
             quillCommentEditor.clipboard.dangerouslyPasteHTML(0, data.answers[0].content || "");
 
+            // 답변 삭제 이벤트 설정
             const answerDeleteButton = document.getElementById("answerDelete");
             answerDeleteButton.onclick = async () => {
                 try {
@@ -266,7 +262,6 @@ const showDetailModal = async (id) => {
                     if (response.ok) {
                         await response.json();
                         alert("답변이 성공적으로 삭제되었습니다!");
-                        // 삭제 후 필요한 후속 처리 (예: 모달 내용 갱신)
                     } else {
                         const error = await response.json();
                         alert(`오류: ${error.detail}`);
@@ -274,14 +269,13 @@ const showDetailModal = async (id) => {
 
                     await fetchQAs(1, selectedValue);
                     const modal = bootstrap.Modal.getInstance(document.getElementById("detailModal"));
-                    modal.hide(); // 모달 닫기
+                    modal.hide();
                 } catch (error) {
                     console.error("답변 삭제 API 요청 실패:", error);
                     alert("서버 오류가 발생했습니다.");
                 }
             };
         }
-
 
         // 댓글 섹션 표시
         document.getElementById("commentSection").style.display = "block";
@@ -290,8 +284,7 @@ const showDetailModal = async (id) => {
         const modal = new bootstrap.Modal(document.getElementById("detailModal"));
         modal.show();
 
-        attachAnswerWriteEvent()
-        // attachAnswerDeleteEvent()
+        attachAnswerWriteEvent();
 
     } catch (error) {
         console.error("Error fetching QA details:", error);

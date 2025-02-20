@@ -1,10 +1,10 @@
+import base64
 from enum import Enum as PyEnum
 from typing import Optional
 
-from pydantic import EmailStr
+from fastapi import UploadFile, File, Form
+from pydantic import EmailStr, BaseModel
 from sqlmodel import SQLModel, Field, Enum
-
-from models.answers import Answer
 
 
 # 1. ENUM 정의
@@ -40,6 +40,19 @@ class Notice(NoticeBase, table=True):
             }
         }
 
+    def to_notice_public(self):
+        return NoticePublic(
+            id=self.id,
+            writer=self.writer,
+            title=self.title,
+            content=self.content,
+            attachment=base64.b64encode(self.attachment).decode("cp949") if self.attachment else None,
+            attachment_filename=self.attachment_filename,
+            c_date=self.c_date,
+            read_cnt=self.read_cnt,
+            notice_type=self.notice_type,
+        )
+
 
 class NoticeShort(SQLModel):
     num: int
@@ -69,15 +82,43 @@ class NoticeShort(SQLModel):
         }
 
 
-class NoticePublic(NoticeBase):
+class NoticePublic(BaseModel):
     id: int
-
-
-class NoticeWithAnswer(NoticePublic):
-    answers: list[Answer] = []
+    title: str
+    content: str
+    attachment: Optional[str] = None
+    attachment_filename: Optional[str] = None
+    writer: str = '평택여객(주)'
+    c_date: Optional[str]
+    read_cnt: int
+    notice_type: NoticeType  # qa_type 필드 추가
 
 
 class NoticeUpdate(SQLModel):
     title: Optional[str] = None
     content: Optional[str] = None
     attachment: Optional[bytes] = None
+
+
+class NoticeRequest(SQLModel):
+    title: str
+    content: str
+    attachment: Optional[UploadFile] = File(None)
+
+    @classmethod
+    def as_form(
+            cls,
+            title: str = Form(...),
+            content: str = Form(...),
+            attachment: UploadFile = File(None),
+    ) -> "NoticeRequest":
+        return cls(title=title, content=content, attachment=attachment)
+
+    async def to_notice(self) -> Notice:
+        data = self.model_dump()
+
+        if self.attachment:
+            data['attachment'] = await self.attachment.read()
+            data['attachment_filename'] = self.attachment.filename
+
+        return Notice(**data)
