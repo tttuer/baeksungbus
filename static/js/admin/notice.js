@@ -11,8 +11,8 @@ function fetchNotices(page) {
     fetch(`/api/notices?page=${page}&page_size=${pageSize}`)
         .then(response => response.json())
         .then(data => {
+            renderPagination(data.page, data.total_pages)
             renderTable(data.notices);
-            renderPagination(data.page, data.total_pages);
         })
         .catch(error => console.error("Error fetching notices:", error));
 }
