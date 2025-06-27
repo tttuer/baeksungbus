@@ -14,6 +14,7 @@ from routes.notices import notice_router
 from routes.pages import page_router
 from routes.qas import qa_router
 from routes.users import users_router
+from utils.settings import settings
 
 
 @asynccontextmanager
@@ -52,5 +53,5 @@ if __name__ == "__main__":
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key="16_J1UcAwXXTcZLhmIYwxfW5md4JGIPrvHp-sDBLmsC7l2HBBFNJAY_o8ByK1QRLdY3YFyOL55ZGmejjnZ3kag",
+    secret_key=settings.middleware_secret,  # settings에서 가져온 미들웨어 시크릿 키 사용
 )

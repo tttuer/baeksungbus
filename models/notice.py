@@ -15,7 +15,7 @@ class NoticeType(PyEnum):
 
 
 class NoticeBase(SQLModel):
-    writer: str = '평택여객(주)'
+    writer: str = '백성운수(주)'
     email: Optional[EmailStr] = None
     title: str
     content: Optional[str] = None
@@ -88,7 +88,7 @@ class NoticePublic(BaseModel):
     content: str
     attachment: Optional[str] = None
     attachment_filename: Optional[str] = None
-    writer: str = '평택여객(주)'
+    writer: str = '백성운수(주)'
     c_date: Optional[str]
     read_cnt: int
     notice_type: NoticeType  # qa_type 필드 추가
