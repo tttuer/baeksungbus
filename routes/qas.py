@@ -134,7 +134,7 @@ async def get_qa(id: int, password: str = 'default-password', session: Session =
 from fastapi import HTTPException, status
 
 
-@qa_router.post("", response_class=RedirectResponse)
+@qa_router.post("")
 async def create_qa(
         writer: str = Form(...),
         email: str = Form(None),
@@ -145,7 +145,7 @@ async def create_qa(
         qa_type: QAType = Form(QAType.CUSTOMER),
         attachment: UploadFile = File(None),
         redirect_url: str = Form(None),
-        session: Session = Depends(get_session)) -> QARetrieve:
+        session: Session = Depends(get_session)):
     # 파일이 존재하는 경우 이미지 파일인지 확인
     if attachment and attachment.filename != '':
         if not attachment.content_type.startswith("image/"):
@@ -180,8 +180,6 @@ async def create_qa(
     session.add(new_qa)
     session.commit()
     session.refresh(new_qa)
-
-    return RedirectResponse(url=redirect_url, status_code=303)
 
 
 # qa 삭제
