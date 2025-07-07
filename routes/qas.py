@@ -23,11 +23,11 @@ from database.connection import get_session
 
 @qa_router.get("", response_model=dict)
 async def get_qas(
-        qa_type: QAType,
-        done: bool = None,
-        page: int = Query(1, ge=1),
-        page_size: int = Query(20, ge=1, le=100),
-        session: Session = Depends(get_session)
+    qa_type: QAType,
+    done: bool = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    session: Session = Depends(get_session),
 ):
     offset = (page - 1) * page_size
 
@@ -41,7 +41,9 @@ async def get_qas(
         )
 
         # 전체 항목 수와 총 페이지 계산
-        total_count = session.exec(select(func.count()).select_from(QA).where(QA.qa_type == qa_type)).one()
+        total_count = session.exec(
+            select(func.count()).select_from(QA).where(QA.qa_type == qa_type)
+        ).one()
     elif done is True:
         statement = (
             select(QA)
@@ -54,7 +56,11 @@ async def get_qas(
 
         # 전체 항목 수와 총 페이지 계산
         total_count = session.exec(
-            select(func.count()).select_from(QA).where(QA.qa_type == qa_type).where(QA.done == True)).one()
+            select(func.count())
+            .select_from(QA)
+            .where(QA.qa_type == qa_type)
+            .where(QA.done == True)
+        ).one()
     else:
         statement = (
             select(QA)
@@ -67,7 +73,11 @@ async def get_qas(
 
         # 전체 항목 수와 총 페이지 계산
         total_count = session.exec(
-            select(func.count()).select_from(QA).where(QA.qa_type == qa_type).where(QA.done == False)).one()
+            select(func.count())
+            .select_from(QA)
+            .where(QA.qa_type == qa_type)
+            .where(QA.done == False)
+        ).one()
 
     result = session.exec(statement).all()
 
@@ -90,26 +100,36 @@ async def get_qas(
     total_pages = (total_count + page_size - 1) // page_size
 
     return {
-        "qas": qas_short,
-        "page": page,
-        "total_pages": total_pages
+        "items": qas_short,
+        "pagination": {
+            "page": page,
+            "limit": page_size,
+            "total": total_count,
+            "totalPages": total_pages,
+        },
     }
 
 
 # qa 상세보기 클릭했을때 조회
 @qa_router.get("/{id}", response_model=QAWithAnswer)
-async def get_qa(id: int, password: str = 'default-password', session: Session = Depends(get_session)) -> QAWithAnswer:
+async def get_qa(
+    id: int, password: str = "default-password", session: Session = Depends(get_session)
+) -> QAWithAnswer:
     # CustomerQA를 id로 조회하고 관련된 answers를 미리 로드
     statement = select(QA).options(selectinload(QA.answers)).where(QA.id == id)
     qa = session.exec(statement).first()
 
     if not qa:
         raise HTTPException(status_code=404, detail="QA not found")
-    if qa.hidden and password != 'default-password' and qa.password != password:
-        raise HTTPException(status_code=HTTP_401_UNAUTHORIZED, detail="Password mismatch")
+    if qa.hidden and password != "default-password" and qa.password != password:
+        raise HTTPException(
+            status_code=HTTP_401_UNAUTHORIZED, detail="Password mismatch"
+        )
 
     # attachment를 Base64로 인코딩
-    attachment_base64 = base64.b64encode(qa.attachment).decode("cp949") if qa.attachment else None
+    attachment_base64 = (
+        base64.b64encode(qa.attachment).decode("cp949") if qa.attachment else None
+    )
 
     # QAPublic 또는 QAWithAnswer 모델로 반환
     return QAWithAnswer(
@@ -126,7 +146,7 @@ async def get_qa(id: int, password: str = 'default-password', session: Session =
         read_cnt=qa.read_cnt,
         hidden=qa.hidden,
         qa_type=qa.qa_type,
-        answers=qa.answers  # 예시로 직접 넣음
+        answers=qa.answers,  # 예시로 직접 넣음
     )
 
 
@@ -136,22 +156,23 @@ from fastapi import HTTPException, status
 
 @qa_router.post("")
 async def create_qa(
-        writer: str = Form(...),
-        email: str = Form(None),
-        password: str = Form(...),
-        title: str = Form(...),
-        content: str = Form(None),
-        hidden: bool = Form(False),
-        qa_type: QAType = Form(QAType.CUSTOMER),
-        attachment: UploadFile = File(None),
-        redirect_url: str = Form(None),
-        session: Session = Depends(get_session)):
+    writer: str = Form(...),
+    email: str = Form(None),
+    password: str = Form(...),
+    title: str = Form(...),
+    content: str = Form(None),
+    hidden: bool = Form(False),
+    qa_type: QAType = Form(QAType.CUSTOMER),
+    attachment: UploadFile = File(None),
+    redirect_url: str = Form(None),
+    session: Session = Depends(get_session),
+):
     # 파일이 존재하는 경우 이미지 파일인지 확인
-    if attachment and attachment.filename != '':
+    if attachment and attachment.filename != "":
         if not attachment.content_type.startswith("image/"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="이미지 파일만 업로드할 수 있습니다."
+                detail="이미지 파일만 업로드할 수 있습니다.",
             )
         attachment_data = await attachment.read()
         attachment_filename = attachment.filename
@@ -172,7 +193,7 @@ async def create_qa(
         attachment=attachment_data,
         hidden=hidden,
         qa_type=qa_type,
-        c_date=get_kr_date().format('%Y-%m-%d'),
+        c_date=get_kr_date().format("%Y-%m-%d"),
         attachment_filename=attachment_filename,
     )
 
@@ -184,14 +205,16 @@ async def create_qa(
 
 # qa 삭제
 @qa_router.delete("/{id}")
-async def delete_qa(id: int, password: str, session: Session = Depends(get_session)) -> dict:
+async def delete_qa(
+    id: int, password: str, session: Session = Depends(get_session)
+) -> dict:
     qa = session.get(QA, id)
     if qa:
         if password == qa.password:
             session.delete(qa)
             session.commit()
             return {
-                'message': 'Customer QA deleted',
+                "message": "Customer QA deleted",
             }
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -205,16 +228,16 @@ async def delete_qa(id: int, password: str, session: Session = Depends(get_sessi
 
 @qa_router.patch("/{id}", response_class=RedirectResponse)
 async def update_qa(
-        id: int,
-        email: str = Form(None),
-        password: str = Form(...),
-        title: str = Form(...),
-        content: str = Form(None),
-        hidden: bool = Form(False),
-        attachment: UploadFile = File(None),
-        keepAttachment: str = Form("true"),
-        redirect_url: str = Form(None),
-        session: Session = Depends(get_session),
+    id: int,
+    email: str = Form(None),
+    password: str = Form(...),
+    title: str = Form(...),
+    content: str = Form(None),
+    hidden: bool = Form(False),
+    attachment: UploadFile = File(None),
+    keepAttachment: str = Form("true"),
+    redirect_url: str = Form(None),
+    session: Session = Depends(get_session),
 ) -> QA:
     qa = session.get(QA, id)
     if not qa:
@@ -225,11 +248,11 @@ async def update_qa(
 
     # 새 파일이 업로드되었거나 파일 삭제가 요청된 경우 처리
     if keepAttachment == "false":
-        if attachment.filename != '':  # 새 파일이 업로드된 경우
+        if attachment.filename != "":  # 새 파일이 업로드된 경우
             if not attachment.content_type.startswith("image/"):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="이미지 파일만 업로드할 수 있습니다."
+                    detail="이미지 파일만 업로드할 수 있습니다.",
                 )
             qa.attachment = await attachment.read()
             qa.attachment_filename = attachment.filename
@@ -243,7 +266,7 @@ async def update_qa(
     qa.title = title
     qa.content = content
     qa.hidden = hidden
-    qa.c_date = get_kr_date().format('%Y-%m-%d')
+    qa.c_date = get_kr_date().format("%Y-%m-%d")
 
     # 변경 사항 저장
     session.add(qa)
@@ -255,7 +278,9 @@ async def update_qa(
 
 
 @qa_router.get("/{id}/check_password")
-async def check_password(id: int, password: str, session: Session = Depends(get_session)):
+async def check_password(
+    id: int, password: str, session: Session = Depends(get_session)
+):
     qa = session.get(QA, id)
 
     if not qa or qa.password != password:
@@ -281,7 +306,7 @@ async def read(id: int, session: Session = Depends(get_session)):
 
 
 def raise_exception(empty_val, message: str):
-    if empty_val == '':
+    if empty_val == "":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,
@@ -290,7 +315,7 @@ def raise_exception(empty_val, message: str):
 
 def get_kr_date():
     # KST 타임존을 설정
-    kst = pytz.timezone('Asia/Seoul')
+    kst = pytz.timezone("Asia/Seoul")
 
     # 현재 KST 날짜와 시간 가져오기
-    return datetime.now(kst).strftime('%Y-%m-%d')
+    return datetime.now(kst).strftime("%Y-%m-%d")
