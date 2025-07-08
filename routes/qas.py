@@ -24,6 +24,7 @@ from database.connection import get_session
 @qa_router.get("", response_model=dict)
 async def get_qas(
     qa_type: QAType,
+    filter: str = None,
     done: bool = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -32,52 +33,114 @@ async def get_qas(
     offset = (page - 1) * page_size
 
     if done is None:
-        statement = (
-            select(QA)
-            .where(QA.qa_type == qa_type)
-            .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
-            .offset(offset)
-            .limit(page_size)
-        )
+        if filter:
+            # 필터링 조건이 있는 경우
+            statement = (
+                select(QA)
+                .where(QA.qa_type == qa_type)
+                .where(QA.title.contains(filter) | QA.content.contains(filter) | QA.writer.contains(filter))
+                .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
+                .offset(offset)
+                .limit(page_size)
+            )
 
-        # 전체 항목 수와 총 페이지 계산
-        total_count = session.exec(
-            select(func.count()).select_from(QA).where(QA.qa_type == qa_type)
-        ).one()
+            # 전체 항목 수와 총 페이지 계산
+            total_count = session.exec(
+                select(func.count())
+                .select_from(QA)
+                .where(QA.qa_type == qa_type)
+                .where(QA.title.contains(filter) | QA.content.contains(filter) | QA.writer.contains(filter))
+            ).one()
+        else:
+            statement = (
+                select(QA)
+                .where(QA.qa_type == qa_type)
+                .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
+                .offset(offset)
+                .limit(page_size)
+            )
+
+            # 전체 항목 수와 총 페이지 계산
+            total_count = session.exec(
+                select(func.count()).select_from(QA).where(QA.qa_type == qa_type)
+            ).one()
     elif done is True:
-        statement = (
-            select(QA)
-            .where(QA.qa_type == qa_type)
-            .where(QA.done == True)
-            .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
-            .offset(offset)
-            .limit(page_size)
-        )
+        if filter:
+            # 필터링 조건이 있는 경우
+            statement = (
+                select(QA)
+                .where(QA.qa_type == qa_type)
+                .where(QA.done == True)
+                .where(QA.title.contains(filter) | QA.content.contains(filter) | QA.writer.contains(filter))
+                .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
+                .offset(offset)
+                .limit(page_size)
+            )
 
-        # 전체 항목 수와 총 페이지 계산
-        total_count = session.exec(
-            select(func.count())
-            .select_from(QA)
-            .where(QA.qa_type == qa_type)
-            .where(QA.done == True)
-        ).one()
+            # 전체 항목 수와 총 페이지 계산
+            total_count = session.exec(
+                select(func.count())
+                .select_from(QA)
+                .where(QA.qa_type == qa_type)
+                .where(QA.done == True)
+                .where(QA.title.contains(filter) | QA.content.contains(filter) | QA.writer.contains(filter))
+            ).one()
+        else:
+            statement = (
+                select(QA)
+                .where(QA.qa_type == qa_type)
+                .where(QA.done == True)
+                .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
+                .offset(offset)
+                .limit(page_size)
+            )
+
+            # 전체 항목 수와 총 페이지 계산
+            total_count = session.exec(
+                select(func.count())
+                .select_from(QA)
+                .where(QA.qa_type == qa_type)
+                .where(QA.done == True)
+            ).one()
     else:
-        statement = (
-            select(QA)
-            .where(QA.qa_type == qa_type)
-            .where(QA.done == False)
-            .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
-            .offset(offset)
-            .limit(page_size)
-        )
+        if filter:
+            # 필터링 조건이 있는 경우
+            statement = (
+                select(QA)
+                .where(QA.qa_type == qa_type)
+                .where(QA.done == False)
+                .where(QA.title.contains(filter) | QA.content.contains(filter)  | QA.writer.contains(filter))
+                .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
+                .offset(offset)
+                .limit(page_size)
+            )
 
-        # 전체 항목 수와 총 페이지 계산
-        total_count = session.exec(
-            select(func.count())
-            .select_from(QA)
-            .where(QA.qa_type == qa_type)
-            .where(QA.done == False)
-        ).one()
+            # 전체 항목 수와 총 페이지 계산
+            total_count = session.exec(
+                select(func.count())
+                .select_from(QA)
+                .where(QA.qa_type == qa_type)
+                .where(QA.done == False)
+                .where(QA.title.contains(filter) | QA.content.contains(filter) | QA.writer.contains(filter))
+            ).one()
+        else:
+            # done이 False인 경우
+            statement = (
+                select(QA)
+                .where(QA.qa_type == qa_type)
+                .where(QA.done == False)
+                .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
+                .offset(offset)
+                .limit(page_size)
+            )
+
+            # 전체 항목 수와 총 페이지 계산
+            total_count = session.exec(
+                select(func.count())
+                .select_from(QA)
+                .where(QA.qa_type == qa_type)
+                .where(QA.done == False)
+            ).one()
 
     result = session.exec(statement).all()
 
