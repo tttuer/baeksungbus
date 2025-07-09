@@ -39,9 +39,8 @@ async def get_schedules(
     schedules = [
         {
             "id": row.id,
-            "num": index + 1,
-            "title": row.title,
-            "image": base64.b64encode(row.image_data1).decode("cp949") if row.image_data1 else None
+            "route_number": row.route_number,
+            "url": row.url,
 
         }
         for index, row in enumerate(result)
@@ -123,17 +122,13 @@ async def delete_schedule(id: int,
     # QA가 존재하지 않는 경우, 404 응답 반환
     return JSONResponse(content={"message": "Schedule not found"}, status_code=404)
 
+class ScheduleUpdateForm(BaseModel):
+    url: str
 
-@schedule_router.put("/{id}", response_class=RedirectResponse)
+@schedule_router.put("/{id}")
 async def update_schedule(
         id: int,
-        title: str = Form(...),
-        image_name1: str = Form(None),
-        image_name2: str = Form(None),
-        image_name3: str = Form(None),
-        image1: UploadFile = File(None),
-        image2: UploadFile = File(None),
-        image3: UploadFile = File(None),
+        update_schedule: ScheduleUpdateForm,
         user: str = Depends(authenticate),
         session: Session = Depends(get_session),
 ):
@@ -146,49 +141,11 @@ async def update_schedule(
             detail="Customer QA not found",
         )
 
-    if not image_name1:
-        schedule.image_name1 = None
-        schedule.image_data1 = None
-    if not image_name2:
-        schedule.image_name2 = None
-        schedule.image_data2 = None
-    if not image_name3:
-        schedule.image_name3 = None
-        schedule.image_data3 = None
-
-    if image1:
-        if not image1.content_type.startswith("image/"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="이미지 파일만 업로드할 수 있습니다."
-            )
-        schedule.image_data1 = await image1.read()
-        schedule.image_name1 = image1.filename
-    if image2:
-        if not image1.content_type.startswith("image/"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="이미지 파일만 업로드할 수 있습니다."
-            )
-        schedule.image_data2 = await image2.read()
-        schedule.image_name2 = image2.filename
-    if image3:
-        if not image1.content_type.startswith("image/"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="이미지 파일만 업로드할 수 있습니다."
-            )
-        schedule.image_data3 = await image3.read()
-        schedule.image_name3 = image3.filename
-
-    schedule.title = title
+    schedule.url = update_schedule.url
 
     # 변경 사항 저장
     session.add(schedule)
     session.commit()
-
-    # 리다이렉션 수행
-    return RedirectResponse(url='/adm/schedule', status_code=303)
 
 
 def raise_exception(empty_val, message: str):
