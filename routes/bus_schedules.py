@@ -49,7 +49,8 @@ async def get_schedules(
     return {
         "schedules": schedules,
         "page": page,
-        "total_pages": total_pages
+        "total_pages": total_pages,
+        "total_count": total_count,
     }
 
 
@@ -64,13 +65,8 @@ async def get_schedule(id: int, session: Session = Depends(get_session)):
     # QAPublic 또는 QAWithAnswer 모델로 반환
     return BusSchedulePublic(
         id=schedule.id,
-        image_name1=schedule.image_name1,
-        image_name2=schedule.image_name2,
-        image_name3=schedule.image_name3,
-        image_data1=base64.b64encode(schedule.image_data1).decode("cp949") if schedule.image_data1 else None,
-        image_data2=base64.b64encode(schedule.image_data2).decode("cp949") if schedule.image_data2 else None,
-        image_data3=base64.b64encode(schedule.image_data3).decode("cp949") if schedule.image_data3 else None,
-        title=schedule.title
+        route_number=schedule.route_number,
+        url=schedule.url,
     )
 
 
