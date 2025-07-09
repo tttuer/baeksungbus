@@ -2,6 +2,7 @@ import base64
 
 from fastapi import APIRouter, UploadFile, File, Form, Response
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 
 from auth.authenticate import authenticate, check_admin
 from models.bus_schedule import BusSchedule, BusSchedulePublic
@@ -77,61 +78,21 @@ async def get_schedule(id: int, session: Session = Depends(get_session)):
 # qa 생성
 from fastapi import HTTPException, status
 
+class SchduleCreateForm(BaseModel):
+    route_number: str
+    url: str
 
 @schedule_router.post("", response_class=Response)
 async def create_schedule(
-        title: str = Form(...),
-        image1: UploadFile = File(None),
-        image2: UploadFile = File(None),
-        image3: UploadFile = File(None),
+        schedule: SchduleCreateForm,
         user: str = Depends(authenticate),
         session: Session = Depends(get_session)) -> Response:
     check_admin(user)
 
-    # 파일이 존재하는 경우 이미지 파일인지 확인
-    if image1 and image1.filename != '':
-        if not image1.content_type.startswith("image/"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="이미지 파일만 업로드할 수 있습니다."
-            )
-        image1_data = await image1.read()
-        image1_filename = image1.filename
-    else:
-        image1_data = None
-        image1_filename = None
-    if image2 and image2.filename != '':
-        if not image2.content_type.startswith("image/"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="이미지 파일만 업로드할 수 있습니다."
-            )
-        image2_data = await image2.read()
-        image2_filename = image2.filename
-    else:
-        image2_data = None
-        image2_filename = None
-    if image3 and image3.filename != '':
-        if not image3.content_type.startswith("image/"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="이미지 파일만 업로드할 수 있습니다."
-            )
-        image3_data = await image3.read()
-        image3_filename = image3.filename
-    else:
-        image3_data = None
-        image3_filename = None
-
     # Create the QA object
     new_schedule = BusSchedule(
-        title=title,
-        image_data1=image1_data,
-        image_name1=image1_filename,
-        image_data2=image2_data,
-        image_name2=image2_filename,
-        image_data3=image3_data,
-        image_name3=image3_filename,
+        route_number=schedule.route_number,
+        url=schedule.url,
     )
 
     # Add the object to the session and save to the database

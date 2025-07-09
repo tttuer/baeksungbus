@@ -5,13 +5,8 @@ from sqlmodel import SQLModel, Field
 
 
 class BusScheduleBase(SQLModel):
-    title: str
-    image_data1: Optional[bytes] = None
-    image_name1: Optional[str] = None
-    image_data2: Optional[bytes] = None
-    image_name2: Optional[str] = None
-    image_data3: Optional[bytes] = None
-    image_name3: Optional[str] = None
+    route_number: str
+    url: str
 
 
 class BusSchedule(BusScheduleBase, table=True):
@@ -25,13 +20,8 @@ class QAShort(SQLModel):
 
 class BusSchedulePublic(BaseModel):
     id: int
-    image_name1: Optional[str] = None  # Base64 인코딩된 문자열로 변환
-    image_name2: Optional[str] = None  # Base64 인코딩된 문자열로 변환
-    image_name3: Optional[str] = None  # Base64 인코딩된 문자열로 변환
-    image_data1: Optional[str] = None  # Base64 인코딩된 문자열로 변환
-    image_data2: Optional[str] = None  # Base64 인코딩된 문자열로 변환
-    image_data3: Optional[str] = None  # Base64 인코딩된 문자열로 변환
-    title: Optional[str] = None
+    route_number: str
+    url: str
 
 
 class QAUpdate(SQLModel):

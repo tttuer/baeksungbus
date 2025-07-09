@@ -23,6 +23,7 @@ async def authenticate(token: str = Depends(oauth2_scheme)) -> str:
 
 
 def check_admin(user: str):
+    print(user)
     if user != 'bsbus':
         raise HTTPException(
             status_code=status.HTTP_AUTHORIZED,
