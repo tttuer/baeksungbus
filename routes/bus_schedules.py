@@ -76,6 +76,29 @@ from fastapi import HTTPException, status
 class SchduleCreateForm(BaseModel):
     route_number: str
     url: str
+    
+@schedule_router.post("", response_class=Response)
+async def create_schedules(
+        schedules: list[SchduleCreateForm],
+        user: str = Depends(authenticate),
+        session: Session = Depends(get_session)) -> Response:
+    check_admin(user)
+    
+    if not schedules or len(schedules) == 0:
+        return
+    
+
+    # Create the QA object
+    new_schedules = [BusSchedule(
+        route_number=schedule.route_number,
+        url=schedule.url,
+    ) for schedule in schedules]
+
+    # Add the objects to the session and save to the database
+    session.add_all(new_schedules)
+    session.commit()
+
+    return Response(status_code=200)
 
 @schedule_router.post("", response_class=Response)
 async def create_schedule(
