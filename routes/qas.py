@@ -38,7 +38,11 @@ async def get_qas(
             statement = (
                 select(QA)
                 .where(QA.qa_type == qa_type)
-                .where(QA.title.contains(filter) | QA.content.contains(filter) | QA.writer.contains(filter))
+                .where(
+                    QA.title.contains(filter)
+                    | QA.content.contains(filter)
+                    | QA.writer.contains(filter)
+                )
                 .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
                 .offset(offset)
                 .limit(page_size)
@@ -49,7 +53,11 @@ async def get_qas(
                 select(func.count())
                 .select_from(QA)
                 .where(QA.qa_type == qa_type)
-                .where(QA.title.contains(filter) | QA.content.contains(filter) | QA.writer.contains(filter))
+                .where(
+                    QA.title.contains(filter)
+                    | QA.content.contains(filter)
+                    | QA.writer.contains(filter)
+                )
             ).one()
         else:
             statement = (
@@ -71,7 +79,11 @@ async def get_qas(
                 select(QA)
                 .where(QA.qa_type == qa_type)
                 .where(QA.done == True)
-                .where(QA.title.contains(filter) | QA.content.contains(filter) | QA.writer.contains(filter))
+                .where(
+                    QA.title.contains(filter)
+                    | QA.content.contains(filter)
+                    | QA.writer.contains(filter)
+                )
                 .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
                 .offset(offset)
                 .limit(page_size)
@@ -83,7 +95,11 @@ async def get_qas(
                 .select_from(QA)
                 .where(QA.qa_type == qa_type)
                 .where(QA.done == True)
-                .where(QA.title.contains(filter) | QA.content.contains(filter) | QA.writer.contains(filter))
+                .where(
+                    QA.title.contains(filter)
+                    | QA.content.contains(filter)
+                    | QA.writer.contains(filter)
+                )
             ).one()
         else:
             statement = (
@@ -109,7 +125,11 @@ async def get_qas(
                 select(QA)
                 .where(QA.qa_type == qa_type)
                 .where(QA.done == False)
-                .where(QA.title.contains(filter) | QA.content.contains(filter)  | QA.writer.contains(filter))
+                .where(
+                    QA.title.contains(filter)
+                    | QA.content.contains(filter)
+                    | QA.writer.contains(filter)
+                )
                 .order_by(desc(QA.id))  # id를 기준으로 내림차순 정렬
                 .offset(offset)
                 .limit(page_size)
@@ -121,7 +141,11 @@ async def get_qas(
                 .select_from(QA)
                 .where(QA.qa_type == qa_type)
                 .where(QA.done == False)
-                .where(QA.title.contains(filter) | QA.content.contains(filter) | QA.writer.contains(filter))
+                .where(
+                    QA.title.contains(filter)
+                    | QA.content.contains(filter)
+                    | QA.writer.contains(filter)
+                )
             ).one()
         else:
             # done이 False인 경우
@@ -254,7 +278,7 @@ async def create_qa(
         title=title,
         content=content,
         attachment=attachment_data,
-        hidden=hidden,
+        hidden=True if hidden or password else False,
         qa_type=qa_type,
         c_date=get_kr_date().format("%Y-%m-%d"),
         attachment_filename=attachment_filename,
@@ -268,40 +292,30 @@ async def create_qa(
 
 # qa 삭제
 @qa_router.delete("/{id}")
-async def delete_qa(
-    id: int, password: str, session: Session = Depends(get_session)
-) -> dict:
+async def delete_qa(id: int, session: Session = Depends(get_session)):
     qa = session.get(QA, id)
     if qa:
-        if password == qa.password:
-            session.delete(qa)
-            session.commit()
-            return {
-                "message": "Customer QA deleted",
-            }
+        session.delete(qa)
+        session.commit()
+        return
+    else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password is incorrect",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Customer QA not found",
         )
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Customer QA not found",
-    )
 
 
-@qa_router.patch("/{id}", response_class=RedirectResponse)
+@qa_router.patch("/{id}")
 async def update_qa(
     id: int,
     email: str = Form(None),
     password: str = Form(...),
     title: str = Form(...),
     content: str = Form(None),
-    hidden: bool = Form(False),
     attachment: UploadFile = File(None),
     keepAttachment: str = Form("true"),
-    redirect_url: str = Form(None),
     session: Session = Depends(get_session),
-) -> QA:
+):
     qa = session.get(QA, id)
     if not qa:
         raise HTTPException(
@@ -311,12 +325,13 @@ async def update_qa(
 
     # 새 파일이 업로드되었거나 파일 삭제가 요청된 경우 처리
     if keepAttachment == "false":
-        if attachment.filename != "":  # 새 파일이 업로드된 경우
+        if attachment != None and attachment.filename != "":  # 새 파일이 업로드된 경우
             if not attachment.content_type.startswith("image/"):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="이미지 파일만 업로드할 수 있습니다.",
                 )
+            print("새 파일 업로드됨:", attachment.filename)
             qa.attachment = await attachment.read()
             qa.attachment_filename = attachment.filename
         else:  # 파일 삭제만 요청된 경우
@@ -328,16 +343,12 @@ async def update_qa(
     qa.password = password
     qa.title = title
     qa.content = content
-    qa.hidden = hidden
     qa.c_date = get_kr_date().format("%Y-%m-%d")
 
     # 변경 사항 저장
     session.add(qa)
     session.commit()
     session.refresh(qa)
-
-    # 리다이렉션 수행
-    return RedirectResponse(url=redirect_url, status_code=303)
 
 
 @qa_router.get("/{id}/check_password")
