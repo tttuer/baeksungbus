@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from pydantic import BaseModel
 import pytz
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select, Session
@@ -14,32 +15,37 @@ answer_router = APIRouter(
     tags=["Answer"],
 )
 
+class AnswerCreate(BaseModel):
+    content: str
+    qa_id: int
 
-@answer_router.post("", response_model=Answer)
-async def create_answer(new_answer: Answer, qa_id: int, user: str = Depends(authenticate),
-                        session=Depends(get_session)) -> Answer:
+
+@answer_router.post("")
+async def create_answer(new_answer: AnswerCreate, user: str = Depends(authenticate),
+                        session=Depends(get_session)):
     if user != 'bsbus':
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
     raise_exception(new_answer.content, "Content cannot be blank")
-    raise_exception(qa_id, 'qa_id cannot be null')
+    raise_exception(new_answer.qa_id, 'qa_id cannot be null')
 
-    qa_statement = select(QA).where(QA.id == qa_id)
+    qa_statement = select(QA).where(QA.id == new_answer.qa_id)
     qa = session.exec(qa_statement).first()
     qa.done = True
 
-    new_answer.qa = qa
-    new_answer.creator = user
-    new_answer.qa_id = qa_id
+    answer = Answer(
+        content=new_answer.content,
+        qa_id=new_answer.qa_id,
+        creator=user,
+        qa=qa,
+    )
 
     session.add(qa)
-    session.add(new_answer)
+    session.add(answer)
     session.commit()
-    session.refresh(new_answer)
-
-    return new_answer
+    session.refresh(answer)
 
 
 @answer_router.delete("/{id}")
