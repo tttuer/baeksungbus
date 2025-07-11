@@ -19,9 +19,10 @@ from database.connection import get_session
 
 @schedule_router.get("", response_model=dict)
 async def get_schedules(
-        page: int = Query(1, ge=1),
-        page_size: int = Query(20, ge=1, le=100),
-        session: Session = Depends(get_session)
+    filter: str = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    session: Session = Depends(get_session),
 ):
     offset = (page - 1) * page_size
 
@@ -29,11 +30,10 @@ async def get_schedules(
     total_count = session.exec(select(func.count()).select_from(BusSchedule)).one()
     total_pages = (total_count + page_size - 1) // page_size
 
-    statement = (
-        select(BusSchedule)
-        .offset(offset)
-        .limit(page_size)
-    )
+    if filter and filter != "":
+        statement = select(BusSchedule).where(BusSchedule.route_number == filter).offset(offset).limit(page_size)
+    else:
+        statement = select(BusSchedule).offset(offset).limit(page_size)
     result = session.exec(statement).all()
 
     schedules = [
@@ -41,7 +41,6 @@ async def get_schedules(
             "id": row.id,
             "route_number": row.route_number,
             "url": row.url,
-
         }
         for index, row in enumerate(result)
     ]
@@ -73,26 +72,31 @@ async def get_schedule(id: int, session: Session = Depends(get_session)):
 # qa 생성
 from fastapi import HTTPException, status
 
+
 class SchduleCreateForm(BaseModel):
     route_number: str
     url: str
-    
+
+
 @schedule_router.post("", response_class=Response)
 async def create_schedules(
-        schedules: list[SchduleCreateForm],
-        user: str = Depends(authenticate),
-        session: Session = Depends(get_session)) -> Response:
+    schedules: list[SchduleCreateForm],
+    user: str = Depends(authenticate),
+    session: Session = Depends(get_session),
+) -> Response:
     check_admin(user)
-    
+
     if not schedules or len(schedules) == 0:
         return
-    
 
     # Create the QA object
-    new_schedules = [BusSchedule(
-        route_number=schedule.route_number,
-        url=schedule.url,
-    ) for schedule in schedules]
+    new_schedules = [
+        BusSchedule(
+            route_number=schedule.route_number,
+            url=schedule.url,
+        )
+        for schedule in schedules
+    ]
 
     # Add the objects to the session and save to the database
     session.add_all(new_schedules)
@@ -100,11 +104,13 @@ async def create_schedules(
 
     return Response(status_code=200)
 
+
 @schedule_router.post("", response_class=Response)
 async def create_schedule(
-        schedule: SchduleCreateForm,
-        user: str = Depends(authenticate),
-        session: Session = Depends(get_session)) -> Response:
+    schedule: SchduleCreateForm,
+    user: str = Depends(authenticate),
+    session: Session = Depends(get_session),
+) -> Response:
     check_admin(user)
 
     # Create the QA object
@@ -126,9 +132,9 @@ from fastapi.responses import JSONResponse
 
 
 @schedule_router.delete("/{id}")
-async def delete_schedule(id: int,
-                          user: str = Depends(authenticate),
-                          session: Session = Depends(get_session)):
+async def delete_schedule(
+    id: int, user: str = Depends(authenticate), session: Session = Depends(get_session)
+):
     check_admin(user)
 
     schedule = session.get(BusSchedule, id)
@@ -136,20 +142,24 @@ async def delete_schedule(id: int,
     if schedule:
         session.delete(schedule)
         session.commit()
-        return JSONResponse(content={"message": "삭제가 완료되었습니다."}, status_code=200)
+        return JSONResponse(
+            content={"message": "삭제가 완료되었습니다."}, status_code=200
+        )
 
     # QA가 존재하지 않는 경우, 404 응답 반환
     return JSONResponse(content={"message": "Schedule not found"}, status_code=404)
 
+
 class ScheduleUpdateForm(BaseModel):
     url: str
 
+
 @schedule_router.put("/{id}")
 async def update_schedule(
-        id: int,
-        update_schedule: ScheduleUpdateForm,
-        user: str = Depends(authenticate),
-        session: Session = Depends(get_session),
+    id: int,
+    update_schedule: ScheduleUpdateForm,
+    user: str = Depends(authenticate),
+    session: Session = Depends(get_session),
 ):
     check_admin(user)
 
@@ -168,7 +178,7 @@ async def update_schedule(
 
 
 def raise_exception(empty_val, message: str):
-    if empty_val == '':
+    if empty_val == "":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,
