@@ -60,7 +60,15 @@ async def get_notices(
         for index, row in enumerate(result)
     ]
 
-    return {"notices": notices_short, "page": page, "total_pages": total_pages}
+    return {
+        "notices": notices_short,
+        "pagination": {
+            "page": page,
+            "limit": page_size,
+            "total": total_count,
+            "totalPages": total_pages,
+        },
+    }
 
 
 # qa 상세보기 클릭했을때 조회
@@ -137,7 +145,7 @@ async def update_notice(
         notice.content = new_notice.content
         notice.attachment = new_notice.attachment
         notice.attachment_filename = new_notice.attachment_filename
-        
+
         session.add(notice)
         session.commit()
         session.refresh(notice)
@@ -148,6 +156,20 @@ async def update_notice(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Notice not found",
     )
+
+@notice_router.patch("/{id}/read")
+async def read(id: int, session: Session = Depends(get_session)):
+    notice = session.get(Notice, id)
+    if not notice:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="QA not found",
+        )
+
+    notice.read_cnt += 1
+
+    session.commit()
+    session.refresh(notice)
 
 
 def raise_exception(empty_val, message: str):
