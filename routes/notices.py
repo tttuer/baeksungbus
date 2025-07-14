@@ -133,8 +133,6 @@ async def update_notice(
     if notice:
         new_notice = await notice_request.to_notice()
 
-        print("update: ", new_notice)
-
         notice.title = new_notice.title
         notice.content = new_notice.content
         notice.attachment = new_notice.attachment
