@@ -1,5 +1,0 @@
-User-agent: *
-Disallow: /adm/
-
-Sitemap: https://bs.baeksung.kr/sitemap.xml
-
