@@ -8,7 +8,6 @@ from starlette.templating import Jinja2Templates
 
 
 class Settings(BaseSettings):
-    kakao_api_key: str
     db_user: str
     db_password: str
     middleware_secret: str
