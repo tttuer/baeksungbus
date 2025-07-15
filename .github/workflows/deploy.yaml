@@ -48,5 +48,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "🔐 K3s 서버에서 배포 재시작..."
-            kubectl rollout restart deployment/baeksungbus
+            kubectl rollout restart deployment/baeksung-app -n baeksungbus
             echo "✅ 배포 완료!"
