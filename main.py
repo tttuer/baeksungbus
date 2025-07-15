@@ -56,7 +56,6 @@ app.include_router(page_router)  # 프론트엔드 라우터는 /api가 필요 �
 
 # 프론트 세팅
 # 정적 파일 경로 설정
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
