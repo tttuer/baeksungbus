@@ -1,10 +1,14 @@
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.openapi.docs import get_swagger_ui_html
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.staticfiles import StaticFiles
+from starlette.responses import JSONResponse
+import secrets
 
 from auth.authenticate import AuthMiddleware
 from routes.answers import answer_router
@@ -22,12 +26,33 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+security = HTTPBasic()
+
+
+def verify_docs_auth(credentials: HTTPBasicCredentials = Depends(security)):
+    is_correct_username = secrets.compare_digest(credentials.username, settings.docs_id)
+    is_correct_password = secrets.compare_digest(
+        credentials.password, settings.docs_password
+    )
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
+
+app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "https://bs.baeksung.kr"],  # Vue.js 개발 서버
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://bs.baeksung.kr",
+    ],  # Vue.js 개발 서버
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,6 +76,21 @@ api_router.include_router(captcha_router)
 # api_router를 메인 애플리케이션에 추가
 app.include_router(api_router)
 app.include_router(captcha_router)
+
+
+# 보호된 OpenAPI JSON 제공
+@app.get("/api/openapi.json", include_in_schema=False)
+def secure_openapi(credentials: HTTPBasicCredentials = Depends(verify_docs_auth)):
+    return JSONResponse(app.openapi())
+
+
+# 보호된 docs 제공
+@app.get("/api/docs", include_in_schema=False)
+def secure_docs(credentials: HTTPBasicCredentials = Depends(verify_docs_auth)):
+    return get_swagger_ui_html(
+        openapi_url="/api/openapi.json", title="백성운수 API Documentation"
+    )
+
 
 # 프론트 세팅
 # 정적 파일 경로 설정
