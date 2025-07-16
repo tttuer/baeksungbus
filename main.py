@@ -49,7 +49,7 @@ app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
+        "http://localhost:5173",
         "http://127.0.0.1:3000",
         "https://bs.baeksung.kr",
     ],  # Vue.js 개발 서버
