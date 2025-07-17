@@ -10,6 +10,7 @@ from database.connection import get_session
 from models import Answer
 from models.answers import AnswerUpdate
 from models.qa import QA
+from utils.email import send_email
 
 answer_router = APIRouter(
     tags=["Answer"],
@@ -46,6 +47,33 @@ async def create_answer(new_answer: AnswerCreate, user: str = Depends(authentica
     session.add(answer)
     session.commit()
     session.refresh(answer)
+
+    # --- 이메일 발송 로직 추가 (Create) ---
+    if qa.email: # QA 모델에 questioner_email 필드가 있다고 가정
+        email_subject = f"문의하신 질문 '{qa.title[:30]}...'에 답변이 등록되었습니다."
+        email_body = f"""
+        안녕하세요, 백성운수(주) 입니다.
+
+        문의하신 질문에 대한 답변이 등록되었습니다:
+
+        질문: {qa.title}
+        답변: {new_answer.content}
+
+        더 궁금한 점이 있으시면 언제든지 다시 문의해주세요.
+
+        감사합니다.
+
+        PS. 본 이메일은 자동으로 발송된 것입니다. 답변에 대한 추가 질문이 있으시면, 다시 문의해 주세요.
+        """
+        email_sent = await send_email(qa.email, email_subject, email_body)
+        if not email_sent:
+            # 이메일 발송 실패 시 경고 또는 로그 남기기 (메인 로직은 성공으로 간주)
+            print(f"Failed to send email to {qa.email}")
+            # 또는 
+            raise HTTPException(status_code=500, detail="Answer created, but failed to send notification email.")
+    # -----------------------------------
+
+    return {"message": "답변이 성공적으로 등록되었습니다.", "answer": answer}
 
 
 @answer_router.delete("/{id}")
@@ -88,6 +116,30 @@ async def update_answer(id: int, update_answer: AnswerUpdate, user: str = Depend
         session.add(answer)
         session.commit()
         session.refresh(answer)
+
+         # --- 이메일 발송 로직 추가 (Update) ---
+        qa = session.get(QA, answer.qa_id)
+        if qa and qa.email:
+            email_subject = f"문의하신 질문 '{qa.title[:30]}...'에 대한 답변이 수정되었습니다."
+            email_body = f"""
+            안녕하세요, 백성운수(주) 입니다.
+
+            문의하신 질문에 대한 답변이 다음과 같이 수정되었습니다:
+
+            질문: {qa.title}
+            답변: {answer.content}
+
+            더 궁금한 점이 있으시면 언제든지 다시 문의해주세요.
+
+            감사합니다.
+
+            PS. 본 이메일은 자동으로 발송된 것입니다. 답변에 대한 추가 질문이 있으시면, 다시 문의해 주세요.
+
+            """
+            email_sent = await send_email(qa.email, email_subject, email_body)
+            if not email_sent:
+                print(f"Failed to send email to {qa.email} after update.")
+        # -----------------------------------
 
         return answer
     raise HTTPException(
