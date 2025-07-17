@@ -28,7 +28,7 @@ async def send_email(to_email: str, subject: str, body: str):
         msg["To"] = to_email
         msg["Subject"] = subject
 
-        part1 = MIMEText(body, "plain")
+        part1 = MIMEText(body, "html")
         msg.attach(part1)
 
         # aiosmtplib 사용

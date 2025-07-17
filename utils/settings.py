@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     email_password: str
     email_server: str
     email_port: int
+    bus_url: str
 
 
     class Config:
