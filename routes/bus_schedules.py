@@ -1,4 +1,5 @@
 import base64
+import json
 from typing import Optional
 
 from fastapi import APIRouter, UploadFile, File, Form, Response
@@ -20,7 +21,6 @@ schedule_router = APIRouter(
 # qa의 전체 리스트 반환
 
 
-
 @schedule_router.get("", response_model=dict)
 async def get_schedules(
     filter: str = None,
@@ -35,7 +35,12 @@ async def get_schedules(
     total_pages = (total_count + page_size - 1) // page_size
 
     if filter and filter != "":
-        statement = select(BusSchedule).where(BusSchedule.route_number == filter).offset(offset).limit(page_size)
+        statement = (
+            select(BusSchedule)
+            .where(BusSchedule.route_number == filter)
+            .offset(offset)
+            .limit(page_size)
+        )
     else:
         statement = select(BusSchedule).offset(offset).limit(page_size)
     result = session.exec(statement).all()
@@ -45,8 +50,7 @@ async def get_schedules(
             "id": row.id,
             "route_number": row.route_number,
             "url": row.url,
-            "image_data": base64.b64encode(row.image_data).decode('utf-8') if row.image_data else None,
-            "image_filename": row.image_filename,
+            "images": json.loads(row.images) if row.images else None,
         }
         for row in result
     ]
@@ -72,8 +76,7 @@ async def get_schedule(id: int, session: Session = Depends(get_session)):
         id=schedule.id,
         route_number=schedule.route_number,
         url=schedule.url,
-        image_data=base64.b64encode(schedule.image_data).decode('utf-8') if schedule.image_data else None,
-        image_filename=schedule.image_filename,
+        images=json.loads(schedule.images) if schedule.images else None,
     )
 
 
@@ -83,8 +86,7 @@ async def get_schedule(id: int, session: Session = Depends(get_session)):
 class SchduleCreateForm(BaseModel):
     route_number: str
     url: str
-    image_data: Optional[str] = None  # Base64 encoded image
-    image_filename: Optional[str] = None
+    images: Optional[list] = None  # [{"data": "base64", "filename": "name"}]
 
 
 @schedule_router.post("", response_class=Response)
@@ -101,17 +103,17 @@ async def create_schedules(
     # Create the schedule objects
     new_schedules = []
     for schedule in schedules:
-        # Decode base64 image data if provided
-        image_data = None
-        if schedule.image_data:
-            import base64
-            image_data = base64.b64decode(schedule.image_data)
+        # Convert images list to JSON string
+        images_json = None
+        if schedule.images:
+            import json
+
+            images_json = json.dumps(schedule.images)
 
         new_schedule = BusSchedule(
             route_number=schedule.route_number,
             url=schedule.url,
-            image_data=image_data,
-            image_filename=schedule.image_filename,
+            images=images_json,
         )
         new_schedules.append(new_schedule)
 
@@ -145,14 +147,14 @@ async def delete_schedule(
 
 
 class ScheduleUpdateForm(BaseModel):
-    url: str
+    url: Optional[str] = None
+    images: Optional[list] = None  # [{"data": "base64", "filename": "name"}]
 
 
 @schedule_router.put("/{id}")
 async def update_schedule(
     id: int,
-    url: str = Form(None),
-    image: UploadFile = File(None),
+    schedule_data: ScheduleUpdateForm,
     user: str = Depends(authenticate),
     session: Session = Depends(get_session),
 ):
@@ -166,13 +168,14 @@ async def update_schedule(
         )
 
     # Update URL if provided
-    if url:
-        schedule.url = url
+    if schedule_data.url is not None:
+        schedule.url = schedule_data.url
 
-    # Update image if provided
-    if image:
-        schedule.image_data = await image.read()
-        schedule.image_filename = image.filename
+    # Update images if provided
+    if schedule_data.images is not None:
+        import json
+
+        schedule.images = json.dumps(schedule_data.images)
 
     # 변경 사항 저장
     session.add(schedule)

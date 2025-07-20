@@ -12,8 +12,7 @@ class BusScheduleBase(SQLModel):
 class BusSchedule(BusScheduleBase, table=True):
     __tablename__ = 'bus_schedule'
     id: int = Field(primary_key=True, default=None)
-    image_data: Optional[bytes] = None
-    image_filename: Optional[str] = None
+    images: Optional[str] = None  # JSON string: [{"data": "base64", "filename": "name"}]
 
 
 class QAShort(SQLModel):
@@ -24,8 +23,7 @@ class BusSchedulePublic(BaseModel):
     id: int
     route_number: str
     url: str
-    image_data: Optional[str] = None  # Base64 encoded image
-    image_filename: Optional[str] = None
+    images: Optional[list] = None  # [{"data": "base64", "filename": "name"}]
 
 
 class QAUpdate(SQLModel):
