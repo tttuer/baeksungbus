@@ -109,7 +109,6 @@ async def create_ddock(
     for image in images:
         content = await image.read()
         image_filename = image.filename
-        print(f"Received image: {image.filename}, size: {len(content)} bytes")
 
         last_order += 1
         ddock = Ddock(image=content, image_name=image_filename, order=last_order)
@@ -133,7 +132,20 @@ async def delete_ddock(id: int,
     ddock = session.get(Ddock, id)
 
     if ddock:
+        deleted_order = ddock.order
+        
+        # 삭제할 ddock 제거
         session.delete(ddock)
+        session.commit()
+        
+        # 삭제된 order보다 큰 order를 가진 ddock들을 1씩 감소
+        statement = select(Ddock).where(Ddock.order > deleted_order).order_by(asc(Ddock.order))
+        remaining_ddocks = session.exec(statement).all()
+        
+        for remaining_ddock in remaining_ddocks:
+            remaining_ddock.order -= 1
+            session.add(remaining_ddock)
+        
         session.commit()
         return JSONResponse(content={"message": "삭제가 완료되었습니다."}, status_code=200)
 
