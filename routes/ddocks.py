@@ -1,5 +1,4 @@
 import base64
-from functools import lru_cache
 
 from fastapi import APIRouter, UploadFile, File, Form, Response
 from fastapi.responses import RedirectResponse
@@ -17,30 +16,49 @@ from sqlmodel import Session, select, desc, asc
 from database.connection import get_session
 
 
-# 데이터베이스 쿼리 함수 캐싱
-@lru_cache(maxsize=100)
-def get_cached_ddocks(session: Session):
+
+
+from fastapi import Query
+
+@ddock_router.get("", response_model=dict)
+async def get_ddocks(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    session: Session = Depends(get_session)
+):
+    offset = (page - 1) * page_size
+    
+    # 전체 개수 계산
+    from sqlmodel import func
+    total_count = session.exec(select(func.count()).select_from(Ddock)).one()
+    total_pages = (total_count + page_size - 1) // page_size
+    
+    # 페이지네이션 적용
     statement = (
         select(Ddock)
         .order_by(asc(Ddock.order))
+        .offset(offset)
+        .limit(page_size)
     )
     result = session.exec(statement).all()
-    return [
+    
+    ddocks = [
         {
-            "num": index,
+            "num": offset + index,
             "id": row.id,
-            "image": base64.b64encode(row.image).decode("cp949") if row.image else None,
+            "image": base64.b64encode(row.image).decode("utf-8") if row.image else None,
             "image_name": row.image_name,
             "order": row.order,
         }
         for index, row in enumerate(result)
     ]
-
-
-@ddock_router.get("", response_model=dict)
-async def get_ddocks(session: Session = Depends(get_session)):
-    ddocks = get_cached_ddocks(session)
-    return {"ddocks": ddocks}
+    
+    return {
+        "ddocks": ddocks,
+        "page": page,
+        "total_pages": total_pages,
+        "total_count": total_count,
+    }
 
 
 # qa 상세보기 클릭했을때 조회
@@ -123,7 +141,7 @@ async def delete_ddock(id: int,
     return JSONResponse(content={"message": "Ddock not found"}, status_code=404)
 
 
-@ddock_router.put("/{id}", response_class=RedirectResponse)
+@ddock_router.put("/{id}")
 async def update_ddock(
         id: int,
         image_name: str = Form(None),
@@ -157,8 +175,6 @@ async def update_ddock(
     session.add(ddock)
     session.commit()
 
-    # 리다이렉션 수행
-    return RedirectResponse(url='/adm/ddock', status_code=303)
 
 
 @ddock_router.patch("/order")
