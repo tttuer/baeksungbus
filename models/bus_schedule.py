@@ -12,6 +12,8 @@ class BusScheduleBase(SQLModel):
 class BusSchedule(BusScheduleBase, table=True):
     __tablename__ = 'bus_schedule'
     id: int = Field(primary_key=True, default=None)
+    image_data: Optional[bytes] = None
+    image_filename: Optional[str] = None
 
 
 class QAShort(SQLModel):
@@ -22,6 +24,8 @@ class BusSchedulePublic(BaseModel):
     id: int
     route_number: str
     url: str
+    image_data: Optional[str] = None  # Base64 encoded image
+    image_filename: Optional[str] = None
 
 
 class QAUpdate(SQLModel):

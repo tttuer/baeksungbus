@@ -1,8 +1,14 @@
 import base64
+from typing import Optional
 
 from fastapi import APIRouter, UploadFile, File, Form, Response
-from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
+from fastapi import HTTPException, status
+from fastapi import Depends, Query
+from sqlmodel import Session, select, func
+from database.connection import get_session
+from fastapi.responses import JSONResponse
+
 
 from auth.authenticate import authenticate, check_admin
 from models.bus_schedule import BusSchedule, BusSchedulePublic
@@ -12,9 +18,7 @@ schedule_router = APIRouter(
 )
 
 # qa의 전체 리스트 반환
-from fastapi import Depends, Query
-from sqlmodel import Session, select, func
-from database.connection import get_session
+
 
 
 @schedule_router.get("", response_model=dict)
@@ -41,8 +45,10 @@ async def get_schedules(
             "id": row.id,
             "route_number": row.route_number,
             "url": row.url,
+            "image_data": base64.b64encode(row.image_data).decode('utf-8') if row.image_data else None,
+            "image_filename": row.image_filename,
         }
-        for index, row in enumerate(result)
+        for row in result
     ]
 
     return {
@@ -61,21 +67,24 @@ async def get_schedule(id: int, session: Session = Depends(get_session)):
     if not schedule:
         raise HTTPException(status_code=404, detail="Schedule not found")
 
-    # QAPublic 또는 QAWithAnswer 모델로 반환
+    # BusSchedulePublic 모델로 반환
     return BusSchedulePublic(
         id=schedule.id,
         route_number=schedule.route_number,
         url=schedule.url,
+        image_data=base64.b64encode(schedule.image_data).decode('utf-8') if schedule.image_data else None,
+        image_filename=schedule.image_filename,
     )
 
 
 # qa 생성
-from fastapi import HTTPException, status
 
 
 class SchduleCreateForm(BaseModel):
     route_number: str
     url: str
+    image_data: Optional[str] = None  # Base64 encoded image
+    image_filename: Optional[str] = None
 
 
 @schedule_router.post("", response_class=Response)
@@ -87,16 +96,24 @@ async def create_schedules(
     check_admin(user)
 
     if not schedules or len(schedules) == 0:
-        return
+        return Response(status_code=400)
 
-    # Create the QA object
-    new_schedules = [
-        BusSchedule(
+    # Create the schedule objects
+    new_schedules = []
+    for schedule in schedules:
+        # Decode base64 image data if provided
+        image_data = None
+        if schedule.image_data:
+            import base64
+            image_data = base64.b64decode(schedule.image_data)
+
+        new_schedule = BusSchedule(
             route_number=schedule.route_number,
             url=schedule.url,
+            image_data=image_data,
+            image_filename=schedule.image_filename,
         )
-        for schedule in schedules
-    ]
+        new_schedules.append(new_schedule)
 
     # Add the objects to the session and save to the database
     session.add_all(new_schedules)
@@ -105,30 +122,7 @@ async def create_schedules(
     return Response(status_code=200)
 
 
-@schedule_router.post("", response_class=Response)
-async def create_schedule(
-    schedule: SchduleCreateForm,
-    user: str = Depends(authenticate),
-    session: Session = Depends(get_session),
-) -> Response:
-    check_admin(user)
-
-    # Create the QA object
-    new_schedule = BusSchedule(
-        route_number=schedule.route_number,
-        url=schedule.url,
-    )
-
-    # Add the object to the session and save to the database
-    session.add(new_schedule)
-    session.commit()
-    session.refresh(new_schedule)
-
-    return Response(status_code=200)
-
-
 # qa 삭제
-from fastapi.responses import JSONResponse
 
 
 @schedule_router.delete("/{id}")
@@ -157,7 +151,8 @@ class ScheduleUpdateForm(BaseModel):
 @schedule_router.put("/{id}")
 async def update_schedule(
     id: int,
-    update_schedule: ScheduleUpdateForm,
+    url: str = Form(None),
+    image: UploadFile = File(None),
     user: str = Depends(authenticate),
     session: Session = Depends(get_session),
 ):
@@ -167,14 +162,23 @@ async def update_schedule(
     if not schedule:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer QA not found",
+            detail="Schedule not found",
         )
 
-    schedule.url = update_schedule.url
+    # Update URL if provided
+    if url:
+        schedule.url = url
+
+    # Update image if provided
+    if image:
+        schedule.image_data = await image.read()
+        schedule.image_filename = image.filename
 
     # 변경 사항 저장
     session.add(schedule)
     session.commit()
+
+    return Response(status_code=200)
 
 
 def raise_exception(empty_val, message: str):
