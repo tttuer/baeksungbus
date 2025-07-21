@@ -17,6 +17,7 @@ from routes.captcha_route import captcha_router
 from routes.ddocks import ddock_router
 from routes.notices import notice_router
 from routes.qas import qa_router
+from routes.recruits import recruit_router
 from routes.users import users_router
 from utils.settings import settings
 
@@ -71,6 +72,7 @@ api_router.include_router(users_router, prefix="/users")
 api_router.include_router(notice_router, prefix="/notices")
 api_router.include_router(schedule_router, prefix="/schedules")
 api_router.include_router(ddock_router, prefix="/ddocks")
+api_router.include_router(recruit_router, prefix="/recruits")
 api_router.include_router(captcha_router)
 
 # api_router를 메인 애플리케이션에 추가
