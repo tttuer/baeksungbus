@@ -153,6 +153,59 @@ async def delete_ddock(id: int,
     return JSONResponse(content={"message": "Ddock not found"}, status_code=404)
 
 
+# 여러 개의 ddock 일괄 삭제
+from pydantic import BaseModel
+
+class BulkDeleteRequest(BaseModel):
+    ids: list[int]
+
+@ddock_router.delete("/bulk")
+async def delete_ddocks_bulk(
+    request: BulkDeleteRequest,
+    user: str = Depends(authenticate),
+    session: Session = Depends(get_session)
+):
+    check_admin(user)
+    
+    if not request.ids:
+        return JSONResponse(content={"message": "삭제할 ID가 없습니다."}, status_code=400)
+    
+    # 삭제할 ddock들을 가져오기
+    statement = select(Ddock).where(Ddock.id.in_(request.ids))
+    ddocks_to_delete = session.exec(statement).all()
+    
+    if not ddocks_to_delete:
+        return JSONResponse(content={"message": "삭제할 Ddock을 찾을 수 없습니다."}, status_code=404)
+    
+    # 삭제할 order들을 수집
+    deleted_orders = [ddock.order for ddock in ddocks_to_delete]
+    min_deleted_order = min(deleted_orders)
+    
+    # 삭제 실행
+    for ddock in ddocks_to_delete:
+        session.delete(ddock)
+    session.commit()
+    
+    # 삭제된 order들보다 큰 order를 가진 ddock들의 order 재정렬
+    statement = select(Ddock).where(Ddock.order > min_deleted_order).order_by(asc(Ddock.order))
+    remaining_ddocks = session.exec(statement).all()
+    
+    # 삭제된 개수만큼 order 감소
+    deleted_count = len(deleted_orders)
+    for remaining_ddock in remaining_ddocks:
+        # 현재 ddock의 order보다 작은 삭제된 order의 개수를 계산
+        smaller_deleted_count = sum(1 for order in deleted_orders if order < remaining_ddock.order)
+        remaining_ddock.order -= smaller_deleted_count
+        session.add(remaining_ddock)
+    
+    session.commit()
+    
+    return JSONResponse(
+        content={"message": f"{len(ddocks_to_delete)}개의 항목이 삭제되었습니다."},
+        status_code=200
+    )
+
+
 @ddock_router.put("/{id}")
 async def update_ddock(
         id: int,
