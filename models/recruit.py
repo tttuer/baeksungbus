@@ -12,6 +12,7 @@ class RecruitBase(SQLModel):
     title: str
     department: str
     note: Optional[str] = None
+    show: bool = True
 
 
 class Recruit(RecruitBase, table=True):
@@ -42,6 +43,7 @@ class RecruitPublic(BaseModel):
     department: str
     experience: List[Experience]
     note: Optional[str] = None
+    show: bool
 
 
 class RecruitRequest(SQLModel):
@@ -49,3 +51,4 @@ class RecruitRequest(SQLModel):
     department: str
     experience: List[Experience]
     note: Optional[str] = None
+    show: bool = True

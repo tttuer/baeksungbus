@@ -13,7 +13,38 @@ recruit_router = APIRouter(
 
 @recruit_router.get("", response_model=List[RecruitPublic])
 async def get_recruits(session: Session = Depends(get_session)) -> List[RecruitPublic]:
-    """모든 채용 정보를 가져옵니다."""
+    """표시 설정된 채용 정보를 가져옵니다."""
+    recruits = session.exec(select(Recruit).where(Recruit.show == True)).all()
+
+    result = []
+    for recruit in recruits:
+        # 각 채용에 대한 경력 요구사항 조회
+        experiences = session.exec(
+            select(RecruitExperience).where(RecruitExperience.recruit_id == recruit.id)
+        ).all()
+
+        recruit_public = RecruitPublic(
+            id=recruit.id,
+            title=recruit.title,
+            department=recruit.department,
+            experience=[
+                {"label": exp.label, "value": exp.value} for exp in experiences
+            ],
+            note=recruit.note,
+            show=recruit.show,
+        )
+        result.append(recruit_public)
+
+    return result
+
+
+@recruit_router.get("/admin/all", response_model=List[RecruitPublic])
+async def get_all_recruits_admin(
+    user: str = Depends(authenticate), session: Session = Depends(get_session)
+) -> List[RecruitPublic]:
+    """관리자용: show 상태와 관계없이 모든 채용 정보를 가져옵니다."""
+    check_admin(user)
+    
     recruits = session.exec(select(Recruit)).all()
 
     result = []
@@ -31,6 +62,7 @@ async def get_recruits(session: Session = Depends(get_session)) -> List[RecruitP
                 {"label": exp.label, "value": exp.value} for exp in experiences
             ],
             note=recruit.note,
+            show=recruit.show,
         )
         result.append(recruit_public)
 
@@ -61,6 +93,7 @@ async def get_recruit(
         department=recruit.department,
         experience=[{"label": exp.label, "value": exp.value} for exp in experiences],
         note=recruit.note,
+        show=recruit.show,
     )
 
 
@@ -84,6 +117,7 @@ async def create_recruit(
         title=recruit_request.title,
         department=recruit_request.department,
         note=recruit_request.note,
+        show=recruit_request.show,
     )
 
     session.add(new_recruit)
@@ -123,6 +157,7 @@ async def update_recruit(
     recruit.title = recruit_request.title
     recruit.department = recruit_request.department
     recruit.note = recruit_request.note
+    recruit.show = recruit_request.show
 
     # 기존 경력 요구사항 삭제
     existing_experiences = session.exec(
