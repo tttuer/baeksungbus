@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import Session, select
 from typing import List
+import logging
 
 from auth.authenticate import authenticate
 from database.connection import get_session
@@ -77,6 +78,7 @@ async def get_recruit(
     recruit = session.get(Recruit, id)
 
     if not recruit:
+        logging.error(f"Recruit with id {id} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Recruit not found",
@@ -107,6 +109,7 @@ async def create_recruit(
     check_admin(user)
 
     if not recruit_request.title:
+        logging.error("Title cannot be blank")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Title cannot be blank",
@@ -148,6 +151,7 @@ async def update_recruit(
 
     recruit = session.get(Recruit, id)
     if not recruit:
+        logging.error(f"Recruit with id {id} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Recruit not found",
@@ -190,6 +194,7 @@ async def delete_recruit(
     recruit = session.get(Recruit, id)
 
     if not recruit:
+        logging.error(f"Recruit with id {id} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Recruit not found",
@@ -212,6 +217,7 @@ async def delete_recruit(
 def check_admin(user: str):
     """관리자 권한을 확인합니다."""
     if user != "bsbus":
+        logging.error(f"User {user} is not an admin")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",

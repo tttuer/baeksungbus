@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+import logging
 
 from auth.hash_password import HashPassword
 from auth.jwt_handler import create_access_token
@@ -21,6 +22,7 @@ hash_password = HashPassword()
 async def signup(user: User, session=Depends(get_session)):
     user_exist = session.get(User, user.id)
     if user_exist:
+        logging.error(f"User with id {user.id} already exists")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail='Email already registered'
@@ -41,17 +43,20 @@ async def signup(user: User, session=Depends(get_session)):
 @users_router.post('/login', response_model=TokenResponse)
 async def login(request: Request, user: OAuth2PasswordRequestForm = Depends(), session=Depends(get_session)):
     if user.username != 'bsbus':
+        logging.error(f"User {user.username} is not an admin")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='User is unauthorized user'
         )
     user_exist = session.get(User, user.username)
     if not user_exist:
+        logging.error(f"User with id {user.username} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail='ID not registered'
         )
     if not hash_password.verify_password(user.password, user_exist.password):
+        logging.error(f"Password mismatch for user {user.username}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail='Password mismatch'

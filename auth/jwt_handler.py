@@ -1,4 +1,5 @@
 import time
+import logging
 from datetime import datetime
 
 from fastapi import HTTPException, status
@@ -31,7 +32,8 @@ def verify_access_token(token: str):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No access token supplied')
         return datetime.utcnow() < datetime.utcfromtimestamp(expire)
 
-    except JWTError:
+    except JWTError as e:
+        logging.error(f"JWTError in verify_access_token: {e}")
         return RedirectResponse(url="/adm/login")
 
 
@@ -47,5 +49,6 @@ def get_access_token(token: str):
 
         return data
 
-    except JWTError:
+    except JWTError as e:
+        logging.error(f"JWTError in get_access_token: {e}")
         return RedirectResponse(url="/adm/login")

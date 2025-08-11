@@ -1,5 +1,6 @@
 import base64
 from datetime import datetime
+import logging
 
 import pytz
 from fastapi import APIRouter, UploadFile, File, Form
@@ -207,8 +208,10 @@ async def get_qa(
     qa = session.exec(statement).first()
 
     if not qa:
+        logging.error(f"QA with id {id} not found")
         raise HTTPException(status_code=404, detail="QA not found")
     if qa.hidden and password != "default-password" and qa.password != password:
+        logging.error(f"Password mismatch for QA with id {id}")
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED, detail="Password mismatch"
         )
@@ -257,6 +260,7 @@ async def create_qa(
     # 파일이 존재하는 경우 이미지 파일인지 확인
     if attachment and attachment.filename != "":
         if not attachment.content_type.startswith("image/"):
+            logging.error(f"File {attachment.filename} is not an image")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="이미지 파일만 업로드할 수 있습니다.",
@@ -299,6 +303,7 @@ async def delete_qa(id: int, session: Session = Depends(get_session)):
         session.commit()
         return
     else:
+        logging.error(f"QA with id {id} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer QA not found",
@@ -318,6 +323,7 @@ async def update_qa(
 ):
     qa = session.get(QA, id)
     if not qa:
+        logging.error(f"QA with id {id} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Customer QA not found",
@@ -327,6 +333,7 @@ async def update_qa(
     if keepAttachment == "false":
         if attachment != None and attachment.filename != "":  # 새 파일이 업로드된 경우
             if not attachment.content_type.startswith("image/"):
+                logging.error(f"File {attachment.filename} is not an image")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="이미지 파일만 업로드할 수 있습니다.",
@@ -358,6 +365,7 @@ async def check_password(
     qa = session.get(QA, id)
 
     if not qa or qa.password != password:
+        logging.error(f"Password incorrect for QA with id {id}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Password incorrect",
@@ -368,6 +376,7 @@ async def check_password(
 async def read(id: int, session: Session = Depends(get_session)):
     qa = session.get(QA, id)
     if not qa:
+        logging.error(f"QA with id {id} not found")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="QA not found",
@@ -381,6 +390,7 @@ async def read(id: int, session: Session = Depends(get_session)):
 
 def raise_exception(empty_val, message: str):
     if empty_val == "":
+        logging.error(f"Validation error: {message}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,

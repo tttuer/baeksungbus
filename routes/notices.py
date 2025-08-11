@@ -1,4 +1,5 @@
 from datetime import datetime
+import logging
 
 import pytz
 from fastapi import APIRouter, HTTPException, status, Depends
@@ -78,6 +79,7 @@ async def get_notice(id: int, session: Session = Depends(get_session)) -> Notice
     notice = session.get(Notice, id)
 
     if not notice:
+        logging.error(f"Notice with id {id} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Notice not found",
@@ -122,6 +124,7 @@ async def delete_notice(
         return {
             "message": "Notice deleted",
         }
+    logging.error(f"Notice with id {id} not found")
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Customer QA not found",
@@ -152,6 +155,7 @@ async def update_notice(
 
         return
 
+    logging.error(f"Notice with id {id} not found")
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Notice not found",
@@ -161,6 +165,7 @@ async def update_notice(
 async def read(id: int, session: Session = Depends(get_session)):
     notice = session.get(Notice, id)
     if not notice:
+        logging.error(f"Notice with id {id} not found")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="QA not found",
@@ -174,6 +179,7 @@ async def read(id: int, session: Session = Depends(get_session)):
 
 def raise_exception(empty_val, message: str):
     if empty_val == "":
+        logging.error(f"Validation error: {message}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,
@@ -182,11 +188,11 @@ def raise_exception(empty_val, message: str):
 
 def check_admin(user: str):
     if user != "bsbus":
+        logging.error(f"Authorization error: User {user} is not an admin")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
-
 
 def get_kr_date():
     # KST 타임존을 설정

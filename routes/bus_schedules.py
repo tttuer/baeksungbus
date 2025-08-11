@@ -1,6 +1,7 @@
 import base64
 import json
 from typing import Optional
+import logging
 
 from fastapi import APIRouter, UploadFile, File, Form, Response
 from pydantic import BaseModel
@@ -69,6 +70,7 @@ async def get_schedule(id: int, session: Session = Depends(get_session)):
     schedule = session.get(BusSchedule, id)
 
     if not schedule:
+        logging.error(f"Schedule with id {id} not found")
         raise HTTPException(status_code=404, detail="Schedule not found")
 
     # BusSchedulePublic 모델로 반환
@@ -139,10 +141,12 @@ async def delete_schedule(
         session.delete(schedule)
         session.commit()
         return JSONResponse(
-            content={"message": "삭제가 완료되었습니다."}, status_code=200
+            content={"message": "삭제가 완료되었습니다."},
+            status_code=200
         )
 
     # QA가 존재하지 않는 경우, 404 응답 반환
+    logging.error(f"Schedule with id {id} not found")
     return JSONResponse(content={"message": "Schedule not found"}, status_code=404)
 
 
@@ -162,6 +166,7 @@ async def update_schedule(
 
     schedule = session.get(BusSchedule, id)
     if not schedule:
+        logging.error(f"Schedule with id {id} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Schedule not found",
@@ -186,6 +191,7 @@ async def update_schedule(
 
 def raise_exception(empty_val, message: str):
     if empty_val == "":
+        logging.error(f"Validation error: {message}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,

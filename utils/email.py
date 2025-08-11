@@ -1,6 +1,7 @@
 # email_utils.py
 import os
 import aiosmtplib
+import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from utils.settings import settings
@@ -16,7 +17,7 @@ async def send_email(to_email: str, subject: str, body: str):
     지정된 이메일 주소로 이메일을 보냅니다.
     """
     if not all([EMAIL_USERNAME, EMAIL_PASSWORD, EMAIL_SERVER, EMAIL_PORT]):
-        print(
+        logging.warning(
             "Warning: Email server configuration is incomplete. Check your .env file."
         )
         # 실제 운영 환경에서는 예외를 발생시키거나 로그를 남기는 것이 좋습니다.
@@ -41,14 +42,14 @@ async def send_email(to_email: str, subject: str, body: str):
             start_tls=True,  # Gmail은 STARTTLS를 사용 (587 포트)
         )
         return True
-    except aiosmtplib.SMTPAuthenticationError:
-        print("Error: Email authentication failed. Check username/password.")
+    except aiosmtplib.SMTPAuthenticationError as e:
+        logging.error(f"Error: Email authentication failed. Check username/password. {e}")
         return False
-    except aiosmtplib.SMTPConnectError:
-        print(
-            f"Error: SMTP server connection failed. Check server '{EMAIL_SERVER}' and port '{EMAIL_PORT}'."
+    except aiosmtplib.SMTPConnectError as e:
+        logging.error(
+            f"Error: SMTP server connection failed. Check server '{EMAIL_SERVER}' and port '{EMAIL_PORT}'. {e}"
         )
         return False
     except Exception as e:
-        print(f"Error sending email: {e}")
+        logging.error(f"Error sending email: {e}")
         return False

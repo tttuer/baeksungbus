@@ -1,4 +1,5 @@
 import base64
+import logging
 
 from fastapi import APIRouter, UploadFile, File, Form, Response
 from fastapi.responses import RedirectResponse
@@ -69,6 +70,7 @@ async def get_ddock(id: int, user: str = Depends(authenticate), session: Session
     ddock = session.get(Ddock, id)
 
     if not ddock:
+        logging.error(f"Ddock with id {id} not found")
         raise HTTPException(status_code=404, detail="Schedule not found")
 
     # QAPublic 또는 QAWithAnswer 모델로 반환
@@ -147,9 +149,11 @@ async def delete_ddock(id: int,
             session.add(remaining_ddock)
         
         session.commit()
-        return JSONResponse(content={"message": "삭제가 완료되었습니다."}, status_code=200)
+        return JSONResponse(content={"message": "삭제가 완료되었습니다."},
+                            status_code=200)
 
     # QA가 존재하지 않는 경우, 404 응답 반환
+    logging.error(f"Ddock with id {id} not found")
     return JSONResponse(content={"message": "Ddock not found"}, status_code=404)
 
 
@@ -168,14 +172,18 @@ async def delete_ddocks_bulk(
     check_admin(user)
     
     if not request.ids:
-        return JSONResponse(content={"message": "삭제할 ID가 없습니다."}, status_code=400)
+        logging.error("Bulk delete error: No IDs provided")
+        return JSONResponse(content={"message": "삭제할 ID가 없습니다."},
+                            status_code=400)
     
     # 삭제할 ddock들을 가져오기
     statement = select(Ddock).where(Ddock.id.in_(request.ids))
     ddocks_to_delete = session.exec(statement).all()
     
     if not ddocks_to_delete:
-        return JSONResponse(content={"message": "삭제할 Ddock을 찾을 수 없습니다."}, status_code=404)
+        logging.error(f"Bulk delete error: Ddocks with ids {request.ids} not found")
+        return JSONResponse(content={"message": "삭제할 Ddock을 찾을 수 없습니다."},
+                            status_code=404)
     
     # 삭제할 order들을 수집
     deleted_orders = [ddock.order for ddock in ddocks_to_delete]
@@ -218,6 +226,7 @@ async def update_ddock(
 
     ddock = session.get(Ddock, id)
     if not ddock:
+        logging.error(f"Ddock with id {id} not found")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ddock not found",
@@ -229,6 +238,7 @@ async def update_ddock(
 
     if image:
         if not image.content_type.startswith("image/"):
+            logging.error(f"File {image.filename} is not an image")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="이미지 파일만 업로드할 수 있습니다."
@@ -270,6 +280,7 @@ async def update_order(
 
 def raise_exception(empty_val, message: str):
     if empty_val == '':
+        logging.error(f"Validation error: {message}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,

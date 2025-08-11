@@ -9,6 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.staticfiles import StaticFiles
 from starlette.responses import JSONResponse
 import secrets
+import logging
 
 from auth.authenticate import AuthMiddleware
 from routes.answers import answer_router
@@ -36,6 +37,7 @@ def verify_docs_auth(credentials: HTTPBasicCredentials = Depends(security)):
         credentials.password, settings.docs_password
     )
     if not (is_correct_username and is_correct_password):
+        logging.error(f"Docs authentication failed for user: {credentials.username}")
         raise HTTPException(
             status_code=401,
             detail="Unauthorized",

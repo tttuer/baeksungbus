@@ -7,6 +7,7 @@ import random
 import string
 import uuid
 import base64
+import logging
 
 captcha_router = APIRouter()
 captcha_store = {}
@@ -46,6 +47,7 @@ async def get_captcha_image():
 async def submit_form(captcha_id: str = Form(...), captcha: str = Form(...)):
     expected = captcha_store.get(captcha_id)
     if expected is None or expected != captcha:
+        logging.error(f"Invalid CAPTCHA: id={captcha_id}, value={captcha}, expected={expected}")
         raise HTTPException(status_code=400, detail="Invalid CAPTCHA")
     del captcha_store[captcha_id]
     return {"message": "CAPTCHA verified successfully!"}

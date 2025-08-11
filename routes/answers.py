@@ -4,6 +4,7 @@ from pydantic import BaseModel
 import pytz
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select, Session
+import logging
 
 from auth.authenticate import authenticate
 from database.connection import get_session
@@ -26,6 +27,7 @@ class AnswerCreate(BaseModel):
 async def create_answer(new_answer: AnswerCreate, user: str = Depends(authenticate),
                         session=Depends(get_session)):
     if user != 'bsbus':
+        logging.error(f"Authorization error: User {user} is not an admin")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
@@ -81,7 +83,7 @@ async def create_answer(new_answer: AnswerCreate, user: str = Depends(authentica
         email_sent = await send_email(qa.email, email_subject, email_body)
         if not email_sent:
             # 이메일 발송 실패 시 경고 또는 로그 남기기 (메인 로직은 성공으로 간주)
-            print(f"Failed to send email to {qa.email}")
+            logging.error(f"Failed to send email to {qa.email}")
             # 또는 
             raise HTTPException(status_code=500, detail="Answer created, but failed to send notification email.")
     # -----------------------------------
@@ -92,7 +94,14 @@ async def create_answer(new_answer: AnswerCreate, user: str = Depends(authentica
 @answer_router.delete("/{id}")
 async def delete_answer(id: int, user: str = Depends(authenticate), session: Session = Depends(get_session)) -> dict:
     answer_exist = session.get(Answer, id)
+    if not answer_exist:
+        logging.error(f"Answer with id {id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Answer not found",
+        )
     if answer_exist.creator != user:
+        logging.error(f"User {user} does not have permission to delete answer {id}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You do not have permission to perform this action",
@@ -107,6 +116,7 @@ async def delete_answer(id: int, user: str = Depends(authenticate), session: Ses
         return {
             'message': 'Answer deleted',
         }
+    logging.error(f"Answer with id {id} not found")
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Event not found",
@@ -117,7 +127,14 @@ async def delete_answer(id: int, user: str = Depends(authenticate), session: Ses
 async def update_answer(id: int, update_answer: AnswerUpdate, user: str = Depends(authenticate),
                         session: Session = Depends(get_session)) -> Answer:
     answer = session.get(Answer, id)
+    if not answer:
+        logging.error(f"Answer with id {id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Answer not found",
+        )
     if answer.creator != user:
+        logging.error(f"User {user} does not have permission to update answer {id}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You do not have permission to perform this action",
@@ -162,10 +179,11 @@ async def update_answer(id: int, update_answer: AnswerUpdate, user: str = Depend
             """
             email_sent = await send_email(qa.email, email_subject, email_body)
             if not email_sent:
-                print(f"Failed to send email to {qa.email} after update.")
+                logging.error(f"Failed to send email to {qa.email} after update.")
         # -----------------------------------
 
         return answer
+    logging.error(f"Answer with id {id} not found")
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail="Answer not found",
@@ -174,6 +192,7 @@ async def update_answer(id: int, update_answer: AnswerUpdate, user: str = Depend
 
 def raise_exception(val, message: str):
     if val == '' or not val:
+        logging.error(f"Validation error: {message}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,
