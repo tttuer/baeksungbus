@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - mysql.yaml
+  - deploy.yaml
+  - ingress.yaml
+
+# Copy secret.example.yaml to secret.yaml, fill real values, and either:
+# 1. apply it manually with kubectl apply -f k8s/secret.yaml, or
+# 2. add secret.yaml to this resources list.

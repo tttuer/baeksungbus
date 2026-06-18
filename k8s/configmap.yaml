@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: baeksungbus-config
+  namespace: baeksungbus
+data:
+  DB_HOST: "baeksungbus-mysql"
+  BUS_URL: "https://bs.baeksung.kr"

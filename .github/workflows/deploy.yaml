@@ -1,52 +1,115 @@
-name: Deploy to Kubernetes
+name: Deploy to k3s
 
 on:
   push:
     branches:
-      - main # `main` 브랜치에 push 될 때 실행
+      - main
+  workflow_dispatch:
+
+env:
+  NAMESPACE: baeksungbus
+  API_IMAGE: tttuer/baeksungbus
+  REMOTE_K8S_DIR: /tmp/baeksungbus-k8s-${{ github.sha }}
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: Production # 🔥 환경별 설정 (GitHub Environment Secrets 사용)
+    environment: Production
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 1️⃣ .env 파일 생성 (Docker Build 전에 필요)
-      - name: Create .env file
-        run: |
-          echo "🔐 .env 파일 생성 중..."
-          echo -e "${{ secrets.ENV_VARS }}" > .env  # `.env` 생성
-          chmod 600 .env
-          echo "✅ .env 파일 생성 완료!"
-
-      # 2️⃣ Docker 로그인 (GitHub 또는 Docker Hub)
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 3️⃣ Docker 이미지 빌드 및 푸시
-      - name: Build and Push Docker Image
-        run: |
-          IMAGE_NAME=tttuer/baeksungbus
-          TAG=latest
-          docker build -t $IMAGE_NAME:$TAG .
-          docker push $IMAGE_NAME:$TAG
-          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.API_IMAGE }}:${{ github.sha }}
+            ${{ env.API_IMAGE }}:latest
 
-      # 4️⃣ K3s 서버에 SSH 접속하여 배포 업데이트
-      - name: Deploy to K3s
-        uses: appleboy/ssh-action@master
+      - name: Upload Kubernetes manifests to k3s server
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: k8s/*
+          target: ${{ env.REMOTE_K8S_DIR }}
+          strip_components: 1
+
+      - name: Apply manifests on k3s
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          API_DEPLOY_IMAGE: ${{ env.API_IMAGE }}:${{ github.sha }}
+          REMOTE_K8S_DIR: ${{ env.REMOTE_K8S_DIR }}
+          NAMESPACE: ${{ env.NAMESPACE }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MIDDLEWARE_SECRET: ${{ secrets.MIDDLEWARE_SECRET }}
+          DOCS_ID: ${{ secrets.DOCS_ID }}
+          DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
+          EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_SERVER: ${{ secrets.EMAIL_SERVER }}
+          EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: API_DEPLOY_IMAGE,REMOTE_K8S_DIR,NAMESPACE,DB_USER,DB_PASSWORD,MYSQL_ROOT_PASSWORD,MIDDLEWARE_SECRET,DOCS_ID,DOCS_PASSWORD,EMAIL_USERNAME,EMAIL_PASSWORD,EMAIL_SERVER,EMAIL_PORT,DOCKER_USERNAME,DOCKER_PASSWORD
           script: |
-            echo "🔐 K3s 서버에서 배포 재시작..."
-            kubectl rollout restart deployment/baeksung-app -n baeksungbus
-            echo "✅ 배포 완료!"
+            set -eu
+
+            echo "Applying namespace..."
+            kubectl apply -f "$REMOTE_K8S_DIR/namespace.yaml"
+
+            echo "Applying secret from GitHub Actions secrets..."
+            kubectl create secret generic baeksungbus-secret \
+              --namespace "$NAMESPACE" \
+              --from-literal=DB_USER="$DB_USER" \
+              --from-literal=DB_PASSWORD="$DB_PASSWORD" \
+              --from-literal=MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
+              --from-literal=MIDDLEWARE_SECRET="$MIDDLEWARE_SECRET" \
+              --from-literal=DOCS_ID="$DOCS_ID" \
+              --from-literal=DOCS_PASSWORD="$DOCS_PASSWORD" \
+              --from-literal=EMAIL_USERNAME="$EMAIL_USERNAME" \
+              --from-literal=EMAIL_PASSWORD="$EMAIL_PASSWORD" \
+              --from-literal=EMAIL_SERVER="$EMAIL_SERVER" \
+              --from-literal=EMAIL_PORT="$EMAIL_PORT" \
+              --dry-run=client -o yaml | kubectl apply -f -
+
+            echo "Applying Docker Hub pull secret..."
+            kubectl create secret docker-registry dockerhub-registry \
+              --namespace "$NAMESPACE" \
+              --docker-server=https://index.docker.io/v1/ \
+              --docker-username="$DOCKER_USERNAME" \
+              --docker-password="$DOCKER_PASSWORD" \
+              --dry-run=client -o yaml | kubectl apply -f -
+
+            echo "Setting deployment images..."
+            sed -i "s|ghcr.io/your-org/baeksungbus-api:latest|$API_DEPLOY_IMAGE|g" "$REMOTE_K8S_DIR/deploy.yaml"
+
+            echo "Applying manifests..."
+            kubectl apply -f "$REMOTE_K8S_DIR/configmap.yaml"
+            kubectl apply -f "$REMOTE_K8S_DIR/mysql.yaml"
+            kubectl apply -f "$REMOTE_K8S_DIR/deploy.yaml"
+            kubectl apply -f "$REMOTE_K8S_DIR/ingress.yaml"
+
+            echo "Waiting for rollout..."
+            kubectl rollout status deployment/baeksungbus-api -n "$NAMESPACE" --timeout=180s
+
+            rm -rf "$REMOTE_K8S_DIR"
+            echo "Deploy complete."

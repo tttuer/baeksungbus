@@ -51,6 +51,7 @@ coverage.xml
 
 # Environment
 .env
+k8s/secret.yaml
 .venv
 env/
 venv/
