@@ -49,16 +49,22 @@ Required GitHub Environment or Repository secrets:
 - `SSH_PORT`
 - `SSH_USER`
 - `SSH_PRIVATE_KEY`
-- `DB_USER`
-- `DB_PASSWORD`
-- `MYSQL_ROOT_PASSWORD`
-- `MIDDLEWARE_SECRET`
-- `DOCS_ID`
-- `DOCS_PASSWORD`
-- `EMAIL_USERNAME`
-- `EMAIL_PASSWORD`
-- `EMAIL_SERVER`
-- `EMAIL_PORT`
+- `ENV_VARS`: multiline backend env file used to create `baeksungbus-secret`
+
+Example `ENV_VARS`:
+
+```text
+DB_USER=test_user
+DB_PASSWORD=change-me
+MYSQL_ROOT_PASSWORD=change-me
+MIDDLEWARE_SECRET=change-me
+DOCS_ID=bsbus
+DOCS_PASSWORD=change-me
+EMAIL_USERNAME=baeksungbus@gmail.com
+EMAIL_PASSWORD=change-me
+EMAIL_SERVER=smtp.gmail.com
+EMAIL_PORT=587
+```
 
 Or, after adding `secret.yaml` to `kustomization.yaml`:
 

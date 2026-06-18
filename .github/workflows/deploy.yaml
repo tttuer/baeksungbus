@@ -35,6 +35,11 @@ jobs:
             ${{ env.API_IMAGE }}:${{ github.sha }}
             ${{ env.API_IMAGE }}:latest
 
+      - name: Generate backend env file
+        run: |
+          printf '%s\n' "${{ secrets.ENV_VARS }}" > k8s/baeksungbus.env
+          chmod 600 k8s/baeksungbus.env
+
       - name: Upload Kubernetes manifests to k3s server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -52,16 +57,6 @@ jobs:
           API_DEPLOY_IMAGE: ${{ env.API_IMAGE }}:${{ github.sha }}
           REMOTE_K8S_DIR: ${{ env.REMOTE_K8S_DIR }}
           NAMESPACE: ${{ env.NAMESPACE }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-          MIDDLEWARE_SECRET: ${{ secrets.MIDDLEWARE_SECRET }}
-          DOCS_ID: ${{ secrets.DOCS_ID }}
-          DOCS_PASSWORD: ${{ secrets.DOCS_PASSWORD }}
-          EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          EMAIL_SERVER: ${{ secrets.EMAIL_SERVER }}
-          EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         with:
@@ -69,7 +64,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: API_DEPLOY_IMAGE,REMOTE_K8S_DIR,NAMESPACE,DB_USER,DB_PASSWORD,MYSQL_ROOT_PASSWORD,MIDDLEWARE_SECRET,DOCS_ID,DOCS_PASSWORD,EMAIL_USERNAME,EMAIL_PASSWORD,EMAIL_SERVER,EMAIL_PORT,DOCKER_USERNAME,DOCKER_PASSWORD
+          envs: API_DEPLOY_IMAGE,REMOTE_K8S_DIR,NAMESPACE,DOCKER_USERNAME,DOCKER_PASSWORD
           script: |
             set -eu
 
@@ -79,16 +74,7 @@ jobs:
             echo "Applying secret from GitHub Actions secrets..."
             kubectl create secret generic baeksungbus-secret \
               --namespace "$NAMESPACE" \
-              --from-literal=DB_USER="$DB_USER" \
-              --from-literal=DB_PASSWORD="$DB_PASSWORD" \
-              --from-literal=MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
-              --from-literal=MIDDLEWARE_SECRET="$MIDDLEWARE_SECRET" \
-              --from-literal=DOCS_ID="$DOCS_ID" \
-              --from-literal=DOCS_PASSWORD="$DOCS_PASSWORD" \
-              --from-literal=EMAIL_USERNAME="$EMAIL_USERNAME" \
-              --from-literal=EMAIL_PASSWORD="$EMAIL_PASSWORD" \
-              --from-literal=EMAIL_SERVER="$EMAIL_SERVER" \
-              --from-literal=EMAIL_PORT="$EMAIL_PORT" \
+              --from-env-file="$REMOTE_K8S_DIR/baeksungbus.env" \
               --dry-run=client -o yaml | kubectl apply -f -
 
             echo "Applying Docker Hub pull secret..."

@@ -4,4 +4,5 @@
 __pycache__
 *.pyc
 .env
+k8s/baeksungbus.env
 k8s/secret.yaml
