@@ -91,6 +91,45 @@ jobs:
             echo "Applying manifests..."
             kubectl apply -f "$REMOTE_K8S_DIR/configmap.yaml"
             kubectl apply -f "$REMOTE_K8S_DIR/mysql.yaml"
+
+            echo "Waiting for MySQL..."
+            kubectl rollout status statefulset/baeksungbus-mysql -n "$NAMESPACE" --timeout=180s
+
+            echo "Running database migrations..."
+            kubectl delete job baeksungbus-migrate -n "$NAMESPACE" --ignore-not-found
+            cat <<EOF | kubectl apply -f -
+            apiVersion: batch/v1
+            kind: Job
+            metadata:
+              name: baeksungbus-migrate
+              namespace: $NAMESPACE
+            spec:
+              backoffLimit: 2
+              template:
+                spec:
+                  imagePullSecrets:
+                    - name: dockerhub-registry
+                  restartPolicy: Never
+                  containers:
+                    - name: migrate
+                      image: $API_DEPLOY_IMAGE
+                      imagePullPolicy: IfNotPresent
+                      command:
+                        - /bin/sh
+                        - -c
+                      args:
+                        - uv run alembic upgrade head
+                      envFrom:
+                        - configMapRef:
+                            name: baeksungbus-config
+                        - secretRef:
+                            name: baeksungbus-secret
+            EOF
+            if ! kubectl wait --for=condition=complete job/baeksungbus-migrate -n "$NAMESPACE" --timeout=180s; then
+              kubectl logs job/baeksungbus-migrate -n "$NAMESPACE" || true
+              exit 1
+            fi
+
             kubectl apply -f "$REMOTE_K8S_DIR/deploy.yaml"
             kubectl apply -f "$REMOTE_K8S_DIR/ingress.yaml"
 
