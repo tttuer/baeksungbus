@@ -38,7 +38,7 @@ jobs:
       - name: Generate backend env file
         run: |
           printf '%s\n' "${{ secrets.ENV_VARS }}" > k8s/baeksungbus.env
-          chmod 600 k8s/baeksungbus.env
+          chmod 644 k8s/baeksungbus.env
 
       - name: Upload Kubernetes manifests to k3s server
         uses: appleboy/scp-action@v0.1.7
