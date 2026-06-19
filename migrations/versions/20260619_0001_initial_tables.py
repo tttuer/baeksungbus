@@ -24,6 +24,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("images", sa.String(length=255), nullable=True),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
     op.create_table(
         "ddock",
@@ -32,6 +33,7 @@ def upgrade() -> None:
         sa.Column("order", sa.Integer(), nullable=False, quote=True),
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
     op.create_table(
         "notice",
@@ -52,6 +54,7 @@ def upgrade() -> None:
         sa.Column("creator", sa.String(length=255), nullable=True),
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
     op.create_table(
         "qa",
@@ -73,6 +76,7 @@ def upgrade() -> None:
         ),
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
     op.create_table(
         "recruit",
@@ -82,12 +86,14 @@ def upgrade() -> None:
         sa.Column("show", sa.Boolean(), nullable=False, quote=True),
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
     op.create_table(
         "user",
         sa.Column("id", sa.String(length=255), nullable=False),
         sa.Column("password", sa.String(length=255), nullable=False),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
     op.create_table(
         "answer",
@@ -97,6 +103,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.ForeignKeyConstraint(["qa_id"], ["qa.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
     op.create_table(
         "recruit_experience",
@@ -106,6 +113,7 @@ def upgrade() -> None:
         sa.Column("value", sa.String(length=255), nullable=False),
         sa.ForeignKeyConstraint(["recruit_id"], ["recruit.id"]),
         sa.PrimaryKeyConstraint("id"),
+        if_not_exists=True,
     )
 
 
