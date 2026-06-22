@@ -1,12 +1,14 @@
 from typing import Optional
 
 from pydantic import BaseModel
+from sqlalchemy import Column
+from sqlalchemy.dialects.mysql import LONGBLOB, VARCHAR
 from sqlmodel import SQLModel, Field
 
 
 class DdockBase(SQLModel):
-    image: Optional[bytes] = None
-    image_name: Optional[str] = None
+    image: Optional[bytes] = Field(default=None, sa_column=Column(LONGBLOB))
+    image_name: Optional[str] = Field(default=None, sa_column=Column(VARCHAR(1024)))
     order: int = None
 
 

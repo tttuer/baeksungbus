@@ -1,10 +1,12 @@
 from typing import Optional
 
+from sqlalchemy import Column
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlmodel import SQLModel, Field, Relationship
 
 
 class AnswerBase(SQLModel):
-    content: str
+    content: str = Field(sa_column=Column(LONGTEXT, nullable=False))
     qa_id: int = Field(default=None, foreign_key="qa.id", ondelete='CASCADE')
     creator: Optional[str]
 

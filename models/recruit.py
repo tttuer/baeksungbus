@@ -1,5 +1,7 @@
 from typing import List, Optional
 from pydantic import BaseModel
+from sqlalchemy import Column
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlmodel import SQLModel, Field
 
 
@@ -9,9 +11,9 @@ class Experience(BaseModel):
 
 
 class RecruitBase(SQLModel):
-    title: str
-    department: str
-    note: Optional[str] = None
+    title: str = Field(sa_column=Column(LONGTEXT, nullable=False))
+    department: str = Field(sa_column=Column(LONGTEXT, nullable=False))
+    note: Optional[str] = Field(default=None, sa_column=Column(LONGTEXT))
     show: bool = True
 
 
@@ -33,8 +35,8 @@ class RecruitExperience(SQLModel, table=True):
     __tablename__ = 'recruit_experience'
     id: int = Field(primary_key=True, default=None)
     recruit_id: int = Field(foreign_key="recruit.id")
-    label: str
-    value: str
+    label: str = Field(sa_column=Column(LONGTEXT, nullable=False))
+    value: str = Field(sa_column=Column(LONGTEXT, nullable=False))
 
 
 class RecruitPublic(BaseModel):

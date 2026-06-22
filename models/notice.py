@@ -4,6 +4,8 @@ from typing import Optional
 
 from fastapi import UploadFile, File, Form
 from pydantic import EmailStr, BaseModel
+from sqlalchemy import Column
+from sqlalchemy.dialects.mysql import LONGBLOB, LONGTEXT, VARCHAR
 from sqlmodel import SQLModel, Field, Enum
 
 
@@ -17,10 +19,10 @@ class NoticeType(PyEnum):
 class NoticeBase(SQLModel):
     writer: str = '백성운수(주)'
     email: Optional[EmailStr] = None
-    title: str
-    content: Optional[str] = None
-    attachment: Optional[bytes] = None
-    attachment_filename: Optional[str] = None
+    title: str = Field(sa_column=Column(LONGTEXT, nullable=False))
+    content: Optional[str] = Field(default=None, sa_column=Column(LONGTEXT))
+    attachment: Optional[bytes] = Field(default=None, sa_column=Column(LONGBLOB))
+    attachment_filename: Optional[str] = Field(default=None, sa_column=Column(VARCHAR(1024)))
     c_date: Optional[str] = None
     done: bool = False
     read_cnt: int = 0

@@ -1,18 +1,20 @@
 from typing import Optional
 
+from sqlalchemy import Column
+from sqlalchemy.dialects.mysql import LONGTEXT
 from pydantic import EmailStr, BaseModel
 from sqlmodel import SQLModel, Field
 
 
 class BusScheduleBase(SQLModel):
     route_number: str
-    url: str
+    url: str = Field(sa_column=Column(LONGTEXT, nullable=False))
 
 
 class BusSchedule(BusScheduleBase, table=True):
     __tablename__ = 'bus_schedule'
     id: int = Field(primary_key=True, default=None)
-    images: Optional[str] = None  # JSON string: [{"data": "base64", "filename": "name"}]
+    images: Optional[str] = Field(default=None, sa_column=Column(LONGTEXT))  # JSON string: [{"data": "base64", "filename": "name"}]
 
 
 class QAShort(SQLModel):

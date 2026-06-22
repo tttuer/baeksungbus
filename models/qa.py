@@ -2,6 +2,8 @@ from enum import Enum as PyEnum
 from typing import Optional, List
 
 from pydantic import EmailStr, BaseModel
+from sqlalchemy import Column
+from sqlalchemy.dialects.mysql import LONGBLOB, LONGTEXT, VARCHAR
 from sqlmodel import SQLModel, Field, Relationship, Enum
 
 from models.answers import Answer
@@ -17,10 +19,10 @@ class QABase(SQLModel):
     writer: str
     email: Optional[EmailStr] = None
     password: str
-    title: str
-    content: Optional[str] = None
-    attachment: Optional[bytes] = None
-    attachment_filename: Optional[str] = None
+    title: str = Field(sa_column=Column(LONGTEXT, nullable=False))
+    content: Optional[str] = Field(default=None, sa_column=Column(LONGTEXT))
+    attachment: Optional[bytes] = Field(default=None, sa_column=Column(LONGBLOB))
+    attachment_filename: Optional[str] = Field(default=None, sa_column=Column(VARCHAR(1024)))
     c_date: Optional[str] = None
     done: bool = False
     read_cnt: int = 0
