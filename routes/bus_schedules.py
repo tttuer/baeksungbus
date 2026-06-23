@@ -31,19 +31,21 @@ async def get_schedules(
 ):
     offset = (page - 1) * page_size
 
+    filters = []
+    if filter and filter.strip():
+        filters.append(BusSchedule.route_number.contains(filter.strip()))
+
+    count_statement = select(func.count()).select_from(BusSchedule)
+    statement = select(BusSchedule)
+    for condition in filters:
+        count_statement = count_statement.where(condition)
+        statement = statement.where(condition)
+
     # 전체 항목 수와 총 페이지 계산
-    total_count = session.exec(select(func.count()).select_from(BusSchedule)).one()
+    total_count = session.exec(count_statement).one()
     total_pages = (total_count + page_size - 1) // page_size
 
-    if filter and filter != "":
-        statement = (
-            select(BusSchedule)
-            .where(BusSchedule.route_number == filter)
-            .offset(offset)
-            .limit(page_size)
-        )
-    else:
-        statement = select(BusSchedule).offset(offset).limit(page_size)
+    statement = statement.offset(offset).limit(page_size)
     result = session.exec(statement).all()
 
     schedules = [
