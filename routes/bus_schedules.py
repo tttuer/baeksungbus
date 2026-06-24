@@ -45,7 +45,7 @@ async def get_schedules(
     total_count = session.exec(count_statement).one()
     total_pages = (total_count + page_size - 1) // page_size
 
-    statement = statement.offset(offset).limit(page_size)
+    statement = statement.order_by(BusSchedule.id.asc()).offset(offset).limit(page_size)
     result = session.exec(statement).all()
 
     schedules = [
