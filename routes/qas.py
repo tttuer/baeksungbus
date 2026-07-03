@@ -1,15 +1,18 @@
 import base64
 from datetime import datetime
+import hashlib
 import logging
+import time
 
 import pytz
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import desc
 from sqlalchemy.orm import selectinload
 from starlette.status import HTTP_401_UNAUTHORIZED
 
 from models.qa import QAWithAnswer, QARetrieve
+from routes.captcha_route import verify_and_consume_captcha
 
 qa_router = APIRouter(
     tags=["Qa"],
@@ -20,6 +23,71 @@ from fastapi import Depends, Query
 from sqlmodel import Session, select, func
 from models.qa import QA, QAType
 from database.connection import get_session
+
+SUBMISSION_WINDOW_SECONDS = 60
+SUBMISSION_MAX_PER_WINDOW = 3
+DUPLICATE_WINDOW_SECONDS = 600
+submission_attempts_by_ip = {}
+recent_submission_hashes = {}
+
+
+def get_client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+
+def cleanup_submission_guards(now: float | None = None):
+    now = now or time.time()
+    cutoff = now - SUBMISSION_WINDOW_SECONDS
+    for ip, timestamps in list(submission_attempts_by_ip.items()):
+        recent_timestamps = [timestamp for timestamp in timestamps if timestamp > cutoff]
+        if recent_timestamps:
+            submission_attempts_by_ip[ip] = recent_timestamps
+        else:
+            submission_attempts_by_ip.pop(ip, None)
+
+    duplicate_cutoff = now - DUPLICATE_WINDOW_SECONDS
+    for submission_hash, timestamp in list(recent_submission_hashes.items()):
+        if timestamp <= duplicate_cutoff:
+            recent_submission_hashes.pop(submission_hash, None)
+
+
+def check_submission_rate_limit(ip: str):
+    now = time.time()
+    cleanup_submission_guards(now)
+    timestamps = submission_attempts_by_ip.setdefault(ip, [])
+    if len(timestamps) >= SUBMISSION_MAX_PER_WINDOW:
+        logging.warning("QA submission rate limited ip=%s", ip)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many submissions",
+        )
+    timestamps.append(now)
+
+
+def check_duplicate_submission(ip: str, email: str | None, title: str, content: str | None):
+    now = time.time()
+    cleanup_submission_guards(now)
+    normalized = "|".join(
+        [
+            ip,
+            (email or "").strip().lower(),
+            title.strip(),
+            (content or "").strip(),
+        ]
+    )
+    submission_hash = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    if submission_hash in recent_submission_hashes:
+        logging.warning("Duplicate QA submission blocked ip=%s", ip)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Duplicate submission",
+        )
+    recent_submission_hashes[submission_hash] = now
 
 
 @qa_router.get("", response_model=dict)
@@ -246,6 +314,7 @@ from fastapi import HTTPException, status
 
 @qa_router.post("")
 async def create_qa(
+    request: Request,
     writer: str = Form(...),
     email: str = Form(None),
     password: str = Form(...),
@@ -253,10 +322,28 @@ async def create_qa(
     content: str = Form(None),
     hidden: bool = Form(False),
     qa_type: QAType = Form(QAType.CUSTOMER),
+    captcha_id: str = Form(None),
+    captcha: str = Form(None),
+    website: str = Form(""),
     attachment: UploadFile = File(None),
     redirect_url: str = Form(None),
     session: Session = Depends(get_session),
 ):
+    ip = get_client_ip(request)
+    if website.strip():
+        logging.warning("QA honeypot field filled ip=%s", ip)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid submission",
+        )
+
+    check_submission_rate_limit(ip)
+    if captcha_id or captcha:
+        if not captcha_id or not captcha:
+            raise HTTPException(status_code=400, detail="Invalid CAPTCHA")
+        verify_and_consume_captcha(captcha_id, captcha)
+    check_duplicate_submission(ip, email, title, content)
+
     # 파일이 존재하는 경우 이미지 파일인지 확인
     if attachment and attachment.filename != "":
         if not attachment.content_type.startswith("image/"):
