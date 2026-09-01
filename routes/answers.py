@@ -1,15 +1,13 @@
 from datetime import datetime
 
-from pydantic import BaseModel
 import pytz
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, Depends, File, Form, HTTPException, status, UploadFile
 from sqlmodel import select, Session
 import logging
 
 from auth.authenticate import authenticate
 from database.connection import get_session
 from models import Answer
-from models.answers import AnswerUpdate
 from models.qa import QA
 from utils.email import send_email
 from utils.settings import settings
@@ -18,32 +16,33 @@ answer_router = APIRouter(
     tags=["Answer"],
 )
 
-class AnswerCreate(BaseModel):
-    content: str
-    qa_id: int
-
-
 @answer_router.post("")
-async def create_answer(new_answer: AnswerCreate, user: str = Depends(authenticate),
-                        session=Depends(get_session)):
+async def create_answer(
+    content: str = Form(...),
+    qa_id: int = Form(...),
+    attachment: UploadFile = File(None),
+    user: str = Depends(authenticate),
+    session: Session = Depends(get_session),
+):
     if user != 'bsbus':
         logging.error(f"Authorization error: User {user} is not an admin")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
-    raise_exception(new_answer.content, "Content cannot be blank")
-    raise_exception(new_answer.qa_id, 'qa_id cannot be null')
+    raise_exception(content, "Content cannot be blank")
+    raise_exception(qa_id, 'qa_id cannot be null')
 
-    qa_statement = select(QA).where(QA.id == new_answer.qa_id)
+    qa_statement = select(QA).where(QA.id == qa_id)
     qa = session.exec(qa_statement).first()
     qa.done = True
 
     answer = Answer(
-        content=new_answer.content,
-        qa_id=new_answer.qa_id,
+        content=content,
+        qa_id=qa_id,
         creator=user,
         qa=qa,
+        **(await read_attachment(attachment)),
     )
 
     session.add(qa)
@@ -124,8 +123,14 @@ async def delete_answer(id: int, user: str = Depends(authenticate), session: Ses
 
 
 @answer_router.patch("/{id}")
-async def update_answer(id: int, update_answer: AnswerUpdate, user: str = Depends(authenticate),
-                        session: Session = Depends(get_session)) -> Answer:
+async def update_answer(
+    id: int,
+    content: str = Form(...),
+    attachment: UploadFile = File(None),
+    keep_attachment: bool = Form(True),
+    user: str = Depends(authenticate),
+    session: Session = Depends(get_session),
+) -> Answer:
     answer = session.get(Answer, id)
     if not answer:
         logging.error(f"Answer with id {id} not found")
@@ -140,9 +145,13 @@ async def update_answer(id: int, update_answer: AnswerUpdate, user: str = Depend
             detail="You do not have permission to perform this action",
         )
     if answer:
-        answer_data = update_answer.model_dump(exclude_unset=True)
-        for key, value in answer_data.items():
-            setattr(answer, key, value)
+        answer.content = content
+        if attachment and attachment.filename:
+            for key, value in (await read_attachment(attachment)).items():
+                setattr(answer, key, value)
+        elif not keep_attachment:
+            answer.attachment = None
+            answer.attachment_filename = None
         session.add(answer)
         session.commit()
         session.refresh(answer)
@@ -197,6 +206,16 @@ def raise_exception(val, message: str):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message,
         )
+
+
+async def read_attachment(attachment: UploadFile) -> dict:
+    if not attachment or not attachment.filename:
+        return {}
+
+    data = await attachment.read()
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="파일 크기는 10MB를 초과할 수 없습니다.")
+    return {"attachment": data, "attachment_filename": attachment.filename}
 
 
 def get_kr_date():
